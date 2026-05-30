@@ -72,22 +72,32 @@ namespace BioVR.Molecular
 
             // 4. Generate visual elements into root
             string queryName = name.ToLower();
-            if (queryName.Contains("dopamine"))
+            bool generatedFromAPI = false;
+            if (GcpCloudBridge.Instance != null && GcpCloudBridge.Instance.activeAtoms.Count > 0)
             {
-                GenerateDopamineStructure(structRootObj);
+                GenerateStructureFromAPI(structRootObj);
+                generatedFromAPI = true;
             }
-            else if (queryName.Contains("serotonin"))
+
+            if (!generatedFromAPI)
             {
-                GenerateSerotoninStructure(structRootObj);
-            }
-            else if (queryName.Contains("neuron"))
-            {
-                GenerateProceduralNeuron(structRootObj);
-            }
-            else
-            {
-                // Fallback / Complex receptor (Nicotinic receptor alpha-helices)
-                GenerateProteinReceptorHelices(structRootObj);
+                if (queryName.Contains("dopamine"))
+                {
+                    GenerateDopamineStructure(structRootObj);
+                }
+                else if (queryName.Contains("serotonin"))
+                {
+                    GenerateSerotoninStructure(structRootObj);
+                }
+                else if (queryName.Contains("neuron"))
+                {
+                    GenerateProceduralNeuron(structRootObj);
+                }
+                else
+                {
+                    // Fallback / Complex receptor (Nicotinic receptor alpha-helices)
+                    GenerateProteinReceptorHelices(structRootObj);
+                }
             }
 
             // 5. Apply Uniform Scaling if checked
@@ -125,6 +135,54 @@ namespace BioVR.Molecular
             structRootObj.AddComponent<DraggableObject>();
             structRootObj.AddComponent<ModelRotator>();
             Debug.Log($"[AtomicRenderer] Spawned interactive draggable structure at local offset {offset}. total active: {activeStructureRoots.Count}");
+        }
+
+        private void GenerateStructureFromAPI(GameObject root)
+        {
+            if (GcpCloudBridge.Instance == null || GcpCloudBridge.Instance.activeAtoms.Count == 0) return;
+
+            var atoms = GcpCloudBridge.Instance.activeAtoms;
+            var bonds = GcpCloudBridge.Instance.activeBonds;
+
+            Debug.Log($"[AtomicRenderer] Assembling live biological coordinates: {atoms.Count} atoms, {bonds.Count} bonds.");
+
+            // Spawn Atoms
+            List<Vector3> spawnedPositions = new List<Vector3>();
+            for (int i = 0; i < atoms.Count; i++)
+            {
+                var atom = atoms[i];
+                Color cpkColor = carbonColor;
+                string el = atom.element.ToUpper();
+                if (el == "H") cpkColor = hydrogenColor;
+                else if (el == "O") cpkColor = oxygenColor;
+                else if (el == "N") cpkColor = nitrogenColor;
+                else if (el == "P") cpkColor = new Color(1.0f, 0.5f, 0.0f); // Orange
+                else if (el == "S") cpkColor = Color.yellow; // Yellow
+                else if (el == "F" || el == "CL") cpkColor = new Color(0.12f, 0.75f, 0.12f); // Green
+                else if (el == "BR") cpkColor = new Color(0.6f, 0.12f, 0.12f); // Dark Red
+                else if (el == "I") cpkColor = new Color(0.48f, 0.12f, 0.6f); // Violet
+
+                // Scale comfortable for VR (1 Angstrom = 0.15m in-game)
+                Vector3 pos = new Vector3(atom.x, atom.y, atom.z) * 0.15f;
+                spawnedPositions.Add(pos);
+
+                CreateAtom(root, pos, cpkColor, $"{atom.element}_{i}");
+            }
+
+            // Spawn Bonds
+            for (int i = 0; i < bonds.Count; i++)
+            {
+                var bond = bonds[i];
+                if (bond.atom1 >= 0 && bond.atom1 < spawnedPositions.Count &&
+                    bond.atom2 >= 0 && bond.atom2 < spawnedPositions.Count)
+                {
+                    Vector3 start = spawnedPositions[bond.atom1];
+                    Vector3 end = spawnedPositions[bond.atom2];
+                    
+                    float scaleFactor = bond.order > 1 ? 1.3f : 1.0f;
+                    CreateBond(root, start, end, bondRadius * scaleFactor, new Color(0.7f, 0.7f, 0.7f, 0.8f));
+                }
+            }
         }
 
         public void ClearWorkspace()

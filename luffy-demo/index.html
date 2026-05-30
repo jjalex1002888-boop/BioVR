@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monkey D. Luffy 3D Experience & Blender Mastery</title>
+    
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js and GSAP Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --panel-bg: rgba(15, 17, 26, 0.7);
+            --border-glow: rgba(239, 68, 68, 0.2);
+            --primary: #ef4444; /* Straw Hat Ribbon Red */
+            --secondary: #eab308; /* Yellow Sash Gold */
+            --accent-pink: #ec4899; /* Gear 2 Pink */
+            --accent-purple: #8b5cf6; /* Gear 4 Purple Haki */
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --glow-color: var(--primary);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 3D Viewport Fullscreen */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Overlay UI Panels (Glassmorphism) */
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            z-index: 10;
+            position: absolute;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 15px var(--border-glow);
+        }
+
+        /* Header Title */
+        #header-panel {
+            top: 20px;
+            left: 20px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #header-panel h1 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, var(--text-main) 30%, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .status-badge {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        /* Left Side: Blender Mastery Masterclass */
+        #blender-panel {
+            top: 90px;
+            left: 20px;
+            bottom: 20px;
+            width: 380px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        #blender-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        #blender-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            border-left: 4px solid var(--primary);
+            padding-left: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .blender-tab {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .blender-tab:hover, .blender-tab.active {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+
+        .blender-tab.active {
+            box-shadow: inset 4px 0 0 var(--primary);
+        }
+
+        .blender-tab-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .blender-tab-header i {
+            color: var(--primary);
+            font-size: 16px;
+        }
+
+        .blender-tab-body {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .blender-tab.active .blender-tab-body {
+            max-height: 250px;
+            margin-top: 8px;
+        }
+
+        .blender-tab-body pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #38bdf8;
+            margin-top: 8px;
+            overflow-x: auto;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        /* Right Side: Luffy Transform & Controls Dashboard */
+        #control-panel {
+            top: 20px;
+            right: 20px;
+            bottom: 20px;
+            width: 360px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        #control-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+        #control-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .group-title {
+            font-size: 12px;
+            font-family: var(--font-display);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        /* Transformation Buttons Grid */
+        .grid-2x2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-gear {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px 10px;
+            color: var(--text-main);
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gear::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            opacity: 1;
+        }
+
+        .btn-gear:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-gear.active {
+            background: var(--glow-color);
+            border-color: transparent;
+            box-shadow: 0 0 18px var(--glow-color);
+            color: #000;
+            transform: scale(1.03);
+        }
+        .btn-gear.active::before {
+            background: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%);
+        }
+
+        .btn-gear.active span {
+            color: #000 !important;
+        }
+
+        /* Gear Custom Colors */
+        #gear-base.active { --glow-color: var(--primary); }
+        #gear-second.active { --glow-color: var(--accent-pink); }
+        #gear-third.active { --glow-color: var(--secondary); }
+        #gear-fourth.active { --glow-color: var(--accent-purple); color: #fff; }
+
+        .btn-gear span {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 400;
+            font-family: var(--font-body);
+        }
+
+        /* Combat Action Buttons */
+        .btn-action {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: var(--font-display);
+            font-weight: 700;
+            color: #fca5a5;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-action:hover {
+            background: var(--primary);
+            color: #000;
+            border-color: transparent;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        /* Slider Controls */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        .slider-row label {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .slider-row input[type="range"] {
+            -webkit-appearance: none;
+            width: 100px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .slider-row input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Toggle Switches */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        .toggle-row label {
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: .3s;
+            border-radius: 20px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+        }
+
+        /* Performance Stat HUD */
+        .stat-hud {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-item span:first-child {
+            color: var(--text-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-item span:last-child {
+            font-weight: 700;
+            font-family: var(--font-display);
+        }
+
+        /* Center Stretch HUD Info */
+        #interactive-banner {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(15, 17, 26, 0.6);
+            backdrop-filter: blur(8px);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-family: var(--font-display);
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: opacity 0.5s;
+        }
+
+        #interactive-banner i {
+            color: var(--primary);
+            animation: stretch-bounce 1s infinite alternate;
+        }
+
+        /* Dynamic screen damage flashes */
+        #flash-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 99;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+        }
+
+        /* Screen action lines */
+        #action-lines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.6);
+            }
+        }
+
+        @keyframes stretch-bounce {
+            0% { transform: scaleX(0.9); }
+            100% { transform: scaleX(1.3); }
+        }
+
+        /* Responsive UI Scaling */
+        @media (max-width: 1100px) {
+            #blender-panel {
+                display: none; /* Hide Blender mastery on smaller screens to maximize viewport */
+            }
+            #control-panel {
+                width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="flash-screen"></div>
+    <div id="action-lines"></div>
+    
+    <!-- Title Panel -->
+    <div id="header-panel" class="panel">
+        <h1>Monkey D. Luffy</h1>
+        <div class="status-badge">High Fidelity</div>
+    </div>
+
+    <!-- Blender Mastery Masterclass (Left Panel) -->
+    <div id="blender-panel" class="panel">
+        <h2><i class="fa-solid fa-graduation-cap"></i> Mesh Mastery Guide</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4;">
+            This interactive panel documents the fundamental mechanics of generating high-fidelity meshes in Blender. Select a category below to highlight relevant parts of the character and view code!
+        </p>
+
+        <div class="control-group" id="blender-tabs-container">
+            <!-- Tab 1: Topology -->
+            <div class="blender-tab active" data-highlight="head">
+                <div class="blender-tab-header">
+                    <i class="fa-solid fa-cubes"></i>
+                    <span>Subdivision & Topology</span>
+                </div>
+                <div class="blender-tab-body">
+                    <p>Clean topology ensures meshes subdivide smoothly and animate without distortion. Focus edge-loops around joints and deformers. Use 100% Quad grids.</p>
+                    <pre># Blender Python Subdivision modifier
+sub_mod = obj.modifiers.new("Subdiv", 'SUBSURF')
+sub_mod.levels = 2
+sub_mod.render_levels = 3</pre>
+                </div>
+            </div>
+
+            <!-- Tab 2: Sculpting -->
+            <div class="blender-tab" data-highlight="vest">
+                <div class="blender-tab-header">
+                    <i class="fa-solid fa-paintbrush"></i>
+                    <span>Voxel Remeshing</span>
+                </div>
+                <div class="blender-tab-body">
+                    <p>A hybrid workflow blocks anatomy with primitives, fuses them into a solid block via Voxel Remesh, and sculpts clothes/muscles seamlessly, avoiding gaps.</p>
+                    <pre># Voxel remesh programmatically in 5.1
+bpy.ops.object.mode_set(mode='SCULPT')
+bpy.context.object.data.remesh_voxel_size = 0.02
+bpy.ops.object.voxel_remesh()</pre>
+                </div>
+            </div>
+
+            <!-- Tab 3: Geometry Nodes -->
+            <div class="blender-tab" data-highlight="hat">
+                <div class="blender-tab-header">
+                    <i class="fa-solid fa-diagram-project"></i>
+                    <span>Geometry Nodes</span>
+                </div>
+                <div class="blender-tab-body">
+                    <p>Mathematics defines procedural structures non-destructively. Generating complex straw-weaves, hair patterns, and fabric wrinkles is done via nodes.</p>
+                    <pre># Adding procedural weave vector node
+node_group = bpy.data.node_groups.new("HatWeave", 'GeometryNodeTree')
+mesh_in = node_group.nodes.new('NodeGroupInput')
+mesh_out = node_group.nodes.new('NodeGroupOutput')</pre>
+                </div>
+            </div>
+
+            <!-- Tab 4: API Automation -->
+            <div class="blender-tab" data-highlight="all">
+                <div class="blender-tab-header">
+                    <i class="fa-brands fa-python"></i>
+                    <span>Python Mesh Automation</span>
+                </div>
+                <div class="blender-tab-body">
+                    <p>Automate exports and coordinate scaling using the script console. Blender 5.1 Python API (`bpy`) allows full structural construction in milliseconds.</p>
+                    <pre># Generate direct vertex grid
+mesh = bpy.data.meshes.new("LuffyStrawHat")
+obj = bpy.data.objects.new("StrawHat", mesh)
+bpy.context.scene.collection.objects.link(obj)
+mesh.from_pydata(vertices, edges, faces)</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side Dashboard Controls (Transforms, Moves, Viewers) -->
+    <div id="control-panel" class="panel">
+        <!-- Section 1: Gear Transformation Suite -->
+        <div class="control-group">
+            <div class="group-title">Dynamic Gear Suite</div>
+            <div class="grid-2x2">
+                <button class="btn-gear active" id="gear-base" onclick="changeGear('base')">
+                    <i class="fa-solid fa-street-view" style="font-size: 16px;"></i>
+                    Base Form
+                    <span>Standard Mode</span>
+                </button>
+                <button class="btn-gear" id="gear-second" onclick="changeGear('second')">
+                    <i class="fa-solid fa-wind" style="font-size: 16px;"></i>
+                    Gear 2nd
+                    <span>Steam & Speed</span>
+                </button>
+                <button class="btn-gear" id="gear-third" onclick="changeGear('third')">
+                    <i class="fa-solid fa-hand-fist" style="font-size: 16px;"></i>
+                    Gear 3rd
+                    <span>Giant Fist</span>
+                </button>
+                <button class="btn-gear" id="gear-fourth" onclick="changeGear('fourth')">
+                    <i class="fa-solid fa-shield-halved" style="font-size: 16px;"></i>
+                    Gear 4th
+                    <span>Boundman Haki</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Section 2: Combat Attacks -->
+        <div class="control-group">
+            <div class="group-title">Combat Special Moves</div>
+            <button class="btn-action" id="btn-pistol" onclick="triggerPistolAttack()">
+                <i class="fa-solid fa-arrows-left-right"></i> Gomu Gomu no Pistol!
+            </button>
+            <button class="btn-action" id="btn-redhawk" onclick="triggerRedHawkAttack()" style="margin-top: 5px; background: rgba(249, 115, 22, 0.08); border-color: rgba(249, 115, 22, 0.3); color: #fed7aa;">
+                <i class="fa-solid fa-fire"></i> Gomu Gomu no Red Hawk!
+            </button>
+        </div>
+
+        <!-- Section 3: Mesh & Visualizer Settings -->
+        <div class="control-group">
+            <div class="group-title">Mesh & Material Settings</div>
+            
+            <div class="toggle-row">
+                <label for="wireframe-toggle"><i class="fa-solid fa-border-all"></i> Wireframe Mode</label>
+                <span class="switch">
+                    <input type="checkbox" id="wireframe-toggle" onchange="toggleWireframe(this.checked)">
+                    <span class="toggle-slider"></span>
+                </span>
+            </div>
+
+            <div class="toggle-row">
+                <label for="outline-toggle"><i class="fa-solid fa-pen-nib"></i> Cel-Outlines</label>
+                <span class="switch">
+                    <input type="checkbox" id="outline-toggle" checked onchange="toggleOutlines(this.checked)">
+                    <span class="toggle-slider"></span>
+                </span>
+            </div>
+
+            <div class="slider-row">
+                <label for="camera-fov"><i class="fa-solid fa-camera"></i> View FOV</label>
+                <input type="range" id="camera-fov" min="30" max="75" value="50" oninput="changeFOV(this.value)">
+            </div>
+            
+            <div class="slider-row">
+                <label for="haki-metallic"><i class="fa-solid fa-circle-nodes"></i> Haki Gloss</label>
+                <input type="range" id="haki-metallic" min="0" max="100" value="70" oninput="changeHakiGloss(this.value)">
+            </div>
+        </div>
+
+        <!-- Section 4: Real-time Stats HUD -->
+        <div class="control-group">
+            <div class="group-title">WebGL Technical Metrics</div>
+            <div class="stat-hud">
+                <div class="stat-item">
+                    <span>Vertices</span>
+                    <span id="vert-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Polygons</span>
+                    <span id="poly-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Renderer</span>
+                    <span>WebGL Toon</span>
+                </div>
+                <div class="stat-item">
+                    <span>Shadows</span>
+                    <span>Direct PCSS</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center Stretch Tutorial Banner -->
+    <div id="interactive-banner">
+        <i class="fa-solid fa-hand-pointer"></i> Drag his left fist (red ring) with your mouse to stretch!
+    </div>
+
+    <!-- 3D Canvas Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- 3D Scene Initialization Logic -->
+    <script>
+        // Global Three.js Scene Variables
+        let scene, camera, renderer, controls;
+        let luffyGroup, skeletalArm, stretchyFist, shoulderAnchor;
+        let originalFistPos = new THREE.Vector3();
+        let raycaster, dragPlane, isDragging = false;
+        let mouse = new THREE.Vector2();
+        let dragOffset = new THREE.Vector3();
+        let ambientLight, dirLight, rimLight;
+        
+        // Materials (Toon Shaded)
+        let skinMat, redVestMat, sashMat, pantsMat, hatMat, hairMat, outlineMat, hakiMat, sandalsMat, ribbonMat;
+        let allMaterials = [];
+        let outlineMeshes = [];
+        
+        // Dynamic Particle System
+        let particleSystem, particleGeometry, particleCount = 60;
+        let particles = [];
+        let steamActive = false;
+        let fireActive = false;
+        
+        // Dynamic Ocean Wave Mesh
+        let oceanMesh, oceanGeometry;
+        
+        // Animation States
+        let currentGear = 'base';
+        let animationTime = 0;
+        let outlineThickness = 0.025;
+        let fovValue = 50;
+
+        // Custom 3-Step Cel-Shading Gradient Map
+        function createToonGradient() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 4;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d');
+            // Draw clean banded shades
+            ctx.fillStyle = '#666666'; ctx.fillRect(0, 0, 1, 1);
+            ctx.fillStyle = '#999999'; ctx.fillRect(1, 0, 1, 1);
+            ctx.fillStyle = '#cccccc'; ctx.fillRect(2, 0, 1, 1);
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(3, 0, 1, 1);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.NearestFilter;
+            texture.magFilter = THREE.NearestFilter;
+            return texture;
+        }
+
+        // Custom Procedural Canvas Textures
+        function createStrawTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Base straw gold
+            ctx.fillStyle = '#e5c158';
+            ctx.fillRect(0, 0, 256, 256);
+            
+            // Draw woven grid lines
+            ctx.strokeStyle = '#d4ac31';
+            ctx.lineWidth = 3;
+            for(let i = 0; i < 256; i += 16) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0); ctx.lineTo(i, 256);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i); ctx.lineTo(256, i);
+                ctx.stroke();
+            }
+            
+            // Add cross hatches
+            ctx.strokeStyle = '#f8e08d';
+            ctx.lineWidth = 2;
+            for(let i = 8; i < 256; i += 16) {
+                for(let j = 8; j < 256; j += 16) {
+                    ctx.beginPath();
+                    ctx.moveTo(i-4, j-4); ctx.lineTo(i+4, j+4);
+                    ctx.stroke();
+                }
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function createWoodTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = '#5c4033'; // Deep brown
+            ctx.fillRect(0, 0, 512, 512);
+            
+            // Planks
+            ctx.strokeStyle = '#3d2b1f';
+            ctx.lineWidth = 6;
+            for(let i = 0; i <= 512; i += 64) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0); ctx.lineTo(i, 512);
+                ctx.stroke();
+            }
+            
+            // Wood Grain details
+            ctx.strokeStyle = '#4e3629';
+            ctx.lineWidth = 2;
+            for(let k = 0; k < 20; k++) {
+                ctx.beginPath();
+                let x = Math.random() * 512;
+                ctx.arc(x, Math.random() * 512, 40 + Math.random() * 80, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // Initialize Core Three.js Engine
+        function initEngine() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene & Camera
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#07090e');
+            scene.fog = new THREE.FogExp2('#07090e', 0.035);
+
+            camera = new THREE.PerspectiveCamera(fovValue, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 4, 11);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // prevent going under floor
+            controls.minDistance = 4;
+            controls.maxDistance = 25;
+            controls.target.set(0, 3, 0);
+
+            // Studio Lighting Setup (Anime Toon Optimized)
+            ambientLight = new THREE.AmbientLight('#ffffff', 0.45);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight('#fffdf0', 1.25);
+            dirLight.position.set(5, 12, 7);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.bias = -0.001;
+            scene.add(dirLight);
+
+            // Back/Rim Light (Anime outline halo effect)
+            rimLight = new THREE.DirectionalLight('#ef4444', 1.5);
+            rimLight.position.set(-6, 8, -6);
+            scene.add(rimLight);
+
+            // Interactive Physics Helpers
+            raycaster = new THREE.Raycaster();
+            dragPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0); // Flat drag plane aligned with screen/fist
+            
+            // Window Resize
+            window.addEventListener('resize', onWindowResize, false);
+            
+            // Mouse Drag Listeners for stretchy rubber arms
+            renderer.domElement.addEventListener('mousedown', onMouseDown, false);
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+            renderer.domElement.addEventListener('mouseup', onMouseUp, false);
+            renderer.domElement.addEventListener('touchstart', onTouchStart, { passive: false });
+            renderer.domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+        }
+
+        // Setup Cel-Shaded Materials
+        function initMaterials() {
+            const gradTexture = createToonGradient();
+            const strawTexture = createStrawTexture();
+            
+            skinMat = new THREE.MeshToonMaterial({
+                color: '#ffdbca',
+                gradientMap: gradTexture,
+                roughness: 0.8
+            });
+
+            redVestMat = new THREE.MeshToonMaterial({
+                color: '#ef4444',
+                gradientMap: gradTexture,
+                roughness: 0.9
+            });
+
+            sashMat = new THREE.MeshToonMaterial({
+                color: '#fbbf24',
+                gradientMap: gradTexture,
+                roughness: 0.9
+            });
+
+            pantsMat = new THREE.MeshToonMaterial({
+                color: '#2563eb',
+                gradientMap: gradTexture,
+                roughness: 0.8
+            });
+
+            hatMat = new THREE.MeshToonMaterial({
+                map: strawTexture,
+                gradientMap: gradTexture,
+                roughness: 0.95
+            });
+
+            hairMat = new THREE.MeshToonMaterial({
+                color: '#111827',
+                gradientMap: gradTexture,
+                roughness: 0.7
+            });
+
+            sandalsMat = new THREE.MeshToonMaterial({
+                color: '#9a3412',
+                gradientMap: gradTexture,
+                roughness: 0.9
+            });
+
+            ribbonMat = new THREE.MeshToonMaterial({
+                color: '#dc2626',
+                gradientMap: gradTexture,
+                roughness: 0.9
+            });
+
+            // Advanced Glossy Armament Haki (Shiny dark gradient)
+            hakiMat = new THREE.MeshStandardMaterial({
+                color: '#1a101f',
+                roughness: 0.15,
+                metalness: 0.85,
+                emissive: '#4c1d95',
+                emissiveIntensity: 0.2
+            });
+
+            // Back-face Silhouette Outline Shader Material
+            outlineMat = new THREE.ShaderMaterial({
+                vertexShader: `
+                    uniform float outlineThickness;
+                    void main() {
+                        vec3 displacedPosition = position + normal * outlineThickness;
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPosition, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    void main() {
+                        gl_FragColor = vec4(0.04, 0.05, 0.07, 1.0); // sharp dynamic outline
+                    }
+                `,
+                uniforms: {
+                    outlineThickness: { value: outlineThickness }
+                },
+                side: THREE.BackSide
+            });
+
+            // Batch manage materials
+            allMaterials = [skinMat, redVestMat, sashMat, pantsMat, hatMat, hairMat, sandalsMat, ribbonMat];
+        }
+
+        // Add dynamic solid outlines around geometric parts
+        function attachOutline(mesh) {
+            const outlineMesh = new THREE.Mesh(mesh.geometry, outlineMat);
+            mesh.add(outlineMesh);
+            outlineMeshes.push(outlineMesh);
+        }
+
+        // Procedurally Build Monkey D. Luffy Character Mesh
+        function buildLuffyMesh() {
+            luffyGroup = new THREE.Group();
+            luffyGroup.position.set(0, 0, 0);
+            scene.add(luffyGroup);
+
+            // 1. Torso & Vest
+            const torsoGeo = new THREE.CylinderGeometry(0.7, 0.5, 2.2, 12);
+            const torso = new THREE.Mesh(torsoGeo, redVestMat);
+            torso.position.y = 2.4;
+            torso.castShadow = true;
+            torso.receiveShadow = true;
+            luffyGroup.add(torso);
+            attachOutline(torso);
+
+            // Chest Skin inside Vest
+            const chestGeo = new THREE.CylinderGeometry(0.65, 0.52, 2.1, 10, 1, false, -Math.PI/2, Math.PI);
+            const chestSkin = new THREE.Mesh(chestGeo, skinMat);
+            chestSkin.position.set(0, 0.05, 0.05);
+            torso.add(chestSkin);
+
+            // X-shaped Chest Scar (Gear 4 styling)
+            const scarGroup = new THREE.Group();
+            const scarPieceGeo = new THREE.BoxGeometry(0.7, 0.08, 0.03);
+            const scarMat = new THREE.MeshToonMaterial({ color: '#dc2626', roughness: 1 });
+            
+            const p1 = new THREE.Mesh(scarPieceGeo, scarMat);
+            p1.rotation.z = Math.PI / 4;
+            const p2 = new THREE.Mesh(scarPieceGeo, scarMat);
+            p2.rotation.z = -Math.PI / 4;
+            
+            scarGroup.add(p1);
+            scarGroup.add(p2);
+            scarGroup.position.set(0, 0.4, 0.6);
+            torso.add(scarGroup);
+
+            // 2. Neck
+            const neckGeo = new THREE.CylinderGeometry(0.28, 0.32, 0.6, 10);
+            const neck = new THREE.Mesh(neckGeo, skinMat);
+            neck.position.y = 1.35;
+            torso.add(neck);
+            attachOutline(neck);
+
+            // 3. Head & Expressive Face
+            const headGeo = new THREE.SphereGeometry(0.8, 18, 18);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 0.75;
+            head.castShadow = true;
+            neck.add(head);
+            attachOutline(head);
+
+            // Eye Details
+            const eyeGeo = new THREE.SphereGeometry(0.12, 10, 10);
+            const eyeMat = new THREE.MeshToonMaterial({ color: '#ffffff', roughness: 0.5 });
+            const pupilMat = new THREE.MeshToonMaterial({ color: '#000000', roughness: 0.2 });
+            
+            // Left Eye
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-0.25, 0.1, 0.68);
+            eyeL.scale.set(1.1, 1, 0.3);
+            const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), pupilMat);
+            pupilL.position.set(-0.25, 0.1, 0.75);
+            pupilL.scale.set(1,1,0.4);
+            head.add(eyeL);
+            head.add(pupilL);
+
+            // Right Eye
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(0.25, 0.1, 0.68);
+            eyeR.scale.set(1.1, 1, 0.3);
+            const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), pupilMat);
+            pupilR.position.set(0.25, 0.1, 0.75);
+            pupilR.scale.set(1,1,0.4);
+            head.add(eyeR);
+            head.add(pupilR);
+
+            // Left Eye Scar (Stitched)
+            const eyeScarGeo = new THREE.BoxGeometry(0.22, 0.02, 0.02);
+            const eyeScar = new THREE.Mesh(eyeScarGeo, new THREE.MeshBasicMaterial({color: '#5a2222'}));
+            eyeScar.position.set(-0.25, -0.1, 0.72);
+            eyeScar.rotation.z = -0.15;
+            head.add(eyeScar);
+
+            // Smile (Anime mouth)
+            const mouthGeo = new THREE.RingGeometry(0.08, 0.16, 12, 1, 0, Math.PI);
+            const mouth = new THREE.Mesh(mouthGeo, new THREE.MeshBasicMaterial({color: '#000000', side: THREE.DoubleSide}));
+            mouth.position.set(0, -0.22, 0.72);
+            mouth.rotation.x = Math.PI / 12;
+            mouth.rotation.z = Math.PI; // upside-down ring is smiley curve
+            head.add(mouth);
+
+            // 4. Iconic Straw Hat
+            const hatGroup = new THREE.Group();
+            hatGroup.position.set(0, 0.58, -0.05);
+            hatGroup.rotation.x = -0.08;
+            head.add(hatGroup);
+
+            // Dome
+            const hatDomeGeo = new THREE.SphereGeometry(0.85, 16, 16, 0, Math.PI*2, 0, Math.PI/2);
+            const hatDome = new THREE.Mesh(hatDomeGeo, hatMat);
+            hatDome.castShadow = true;
+            hatGroup.add(hatDome);
+            attachOutline(hatDome);
+
+            // Ribbon Red
+            const ribbonGeo = new THREE.CylinderGeometry(0.88, 0.88, 0.16, 18, 1, true);
+            const ribbon = new THREE.Mesh(ribbonGeo, ribbonMat);
+            ribbon.position.y = 0.08;
+            hatGroup.add(ribbon);
+
+            // Brim (Wide ring)
+            const hatBrimGeo = new THREE.CylinderGeometry(1.6, 1.6, 0.04, 24);
+            const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
+            hatBrim.position.y = 0.01;
+            hatBrim.castShadow = true;
+            hatGroup.add(hatBrim);
+            attachOutline(hatBrim);
+
+            // 5. Spiky Anime Hair
+            const hairGroup = new THREE.Group();
+            head.add(hairGroup);
+
+            // Spikes (placed rotationally)
+            const spikeGeo = new THREE.ConeGeometry(0.2, 0.7, 4);
+            const spikeCount = 14;
+            for(let i=0; i<spikeCount; i++) {
+                const spike = new THREE.Mesh(spikeGeo, hairMat);
+                const angle = (i / spikeCount) * Math.PI * 2;
+                spike.position.set(Math.sin(angle)*0.75, 0.1 + Math.random()*0.2, Math.cos(angle)*0.75);
+                spike.lookAt(head.position);
+                spike.rotation.x += Math.PI/2 + (Math.random()-0.5)*0.3;
+                spike.scale.set(1, 1.2, 0.6);
+                hairGroup.add(spike);
+                attachOutline(spike);
+            }
+            // Front Bangs
+            const bangGeo = new THREE.ConeGeometry(0.14, 0.5, 4);
+            for(let k=0; k<5; k++) {
+                const bang = new THREE.Mesh(bangGeo, hairMat);
+                bang.position.set(-0.4 + k*0.2, 0.45, 0.68);
+                bang.rotation.z = 0.2 - k*0.1;
+                bang.rotation.x = 0.8;
+                hairGroup.add(bang);
+                attachOutline(bang);
+            }
+
+            // 6. Yellow Waist Sash
+            const sashGeo = new THREE.CylinderGeometry(0.58, 0.58, 0.35, 12);
+            const sash = new THREE.Mesh(sashGeo, sashMat);
+            sash.position.y = -1.0;
+            torso.add(sash);
+            attachOutline(sash);
+
+            // Sash tail hanging down
+            const sashTailGeo = new THREE.BoxGeometry(0.25, 0.9, 0.08);
+            const sashTail = new THREE.Mesh(sashTailGeo, sashMat);
+            sashTail.position.set(0.35, -0.4, 0.48);
+            sashTail.rotation.z = -0.15;
+            sashTail.rotation.y = 0.2;
+            sash.add(sashTail);
+            attachOutline(sashTail);
+
+            // 7. Blue Denim Shorts (Hip & Thighs)
+            const hipGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 12);
+            const hip = new THREE.Mesh(hipGeo, pantsMat);
+            hip.position.y = -1.25;
+            torso.add(hip);
+            attachOutline(hip);
+
+            const thighL = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.9, 10), pantsMat);
+            thighL.position.set(-0.35, -0.4, 0);
+            thighL.rotation.z = 0.1;
+            hip.add(thighL);
+            attachOutline(thighL);
+
+            const thighR = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, 0.9, 10), pantsMat);
+            thighR.position.set(0.35, -0.4, 0);
+            thighR.rotation.z = -0.1;
+            hip.add(thighR);
+            attachOutline(thighR);
+
+            // Fuzzy cuffs for shorts
+            const cuffGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.12, 10);
+            const cuffMat = new THREE.MeshToonMaterial({ color: '#f3f4f6', roughness: 0.9 });
+            const cuffL = new THREE.Mesh(cuffGeo, cuffMat);
+            cuffL.position.y = -0.48;
+            thighL.add(cuffL);
+            
+            const cuffR = new THREE.Mesh(cuffGeo, cuffMat);
+            cuffR.position.y = -0.48;
+            thighR.add(cuffR);
+
+            // 8. Lower Legs & Straw Sandals
+            const shinGeo = new THREE.CylinderGeometry(0.18, 0.16, 1.2, 8);
+            
+            // Left Shin
+            const shinL = new THREE.Mesh(shinGeo, skinMat);
+            shinL.position.set(0, -0.9, 0);
+            thighL.add(shinL);
+            attachOutline(shinL);
+
+            // Right Shin
+            const shinR = new THREE.Mesh(shinGeo, skinMat);
+            shinR.position.set(0, -0.9, 0);
+            thighR.add(shinR);
+            attachOutline(shinR);
+
+            // Sandals (Feet)
+            const footGeo = new THREE.BoxGeometry(0.24, 0.15, 0.55);
+            const sandalBaseGeo = new THREE.BoxGeometry(0.28, 0.05, 0.6);
+            
+            // Left foot + sandal
+            const footL = new THREE.Mesh(footGeo, skinMat);
+            footL.position.set(0, -0.62, 0.1);
+            shinL.add(footL);
+            const sandalL = new THREE.Mesh(sandalBaseGeo, sandalsMat);
+            sandalL.position.y = -0.09;
+            footL.add(sandalL);
+            attachOutline(footL);
+
+            // Right foot + sandal
+            const footR = new THREE.Mesh(footGeo, skinMat);
+            footR.position.set(0, -0.62, 0.1);
+            shinR.add(footR);
+            const sandalR = new THREE.Mesh(sandalBaseGeo, sandalsMat);
+            sandalR.position.y = -0.09;
+            footR.add(sandalR);
+            attachOutline(footR);
+
+            // 9. Interactive Rubber Arms
+            
+            // Right arm (standard non-stretchy, or Gear 3 infated!)
+            const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 8), redVestMat);
+            shoulderR.position.set(0.85, 0.8, 0);
+            torso.add(shoulderR);
+
+            const bicepR = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.16, 1.1, 8), skinMat);
+            bicepR.position.set(0.18, -0.55, 0);
+            bicepR.rotation.z = -0.3;
+            shoulderR.add(bicepR);
+            attachOutline(bicepR);
+
+            const forearmR = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 1.0, 8), skinMat);
+            forearmR.position.set(0, -0.95, 0);
+            bicepR.add(forearmR);
+            attachOutline(forearmR);
+
+            const fistR = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 12), skinMat);
+            fistR.position.set(0, -0.6, 0);
+            forearmR.add(fistR);
+            attachOutline(fistR);
+            
+            // Save right arm components to global for Gear 3 scaling
+            window.rightFist = fistR;
+            window.rightForearm = forearmR;
+            window.rightBicep = bicepR;
+
+            // --- Left Arm: FULLY INTERACTIVE STRETCHY SPRING RIG ---
+            shoulderAnchor = new THREE.Group();
+            shoulderAnchor.position.set(-0.85, 3.2, 0); // Absolute relative to scene base
+            luffyGroup.add(shoulderAnchor);
+
+            // Stretchy Fist (target handle)
+            const fistGeo = new THREE.SphereGeometry(0.25, 12, 12);
+            stretchyFist = new THREE.Mesh(fistGeo, skinMat);
+            stretchyFist.position.set(-1.8, 2.2, 0.5); // Default position
+            stretchyFist.castShadow = true;
+            luffyGroup.add(stretchyFist);
+            attachOutline(stretchyFist);
+            
+            // Interactive Glowing Ring indicator on hand
+            const ringGeo = new THREE.RingGeometry(0.38, 0.45, 16);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            stretchyFist.add(ring);
+            window.stretchRing = ring;
+
+            // Elastic arm connecting line mesh (Cylinder that dynamically updates)
+            const armGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.0, 10, 1, true);
+            skeletalArm = new THREE.Mesh(armGeo, skinMat);
+            skeletalArm.castShadow = true;
+            luffyGroup.add(skeletalArm);
+            attachOutline(skeletalArm);
+
+            originalFistPos.copy(stretchyFist.position);
+
+            // Quantize polycounts on interface HUD
+            calculatePolycounts();
+        }
+
+        // Count Vertices & Faces in Scene dynamically
+        function calculatePolycounts() {
+            let totalVerts = 0;
+            let totalPolys = 0;
+            scene.traverse((obj) => {
+                if (obj.isMesh && obj.geometry) {
+                    const pos = obj.geometry.attributes.position;
+                    if(pos) totalVerts += pos.count;
+                    if(obj.geometry.index) totalPolys += obj.geometry.index.count / 3;
+                    else totalPolys += pos.count / 3;
+                }
+            });
+            document.getElementById('vert-count').textContent = Math.round(totalVerts).toLocaleString();
+            document.getElementById('poly-count').textContent = Math.round(totalPolys).toLocaleString();
+        }
+
+        // Initialize Dynamic Stylized Ocean Water
+        function initOcean() {
+            oceanGeometry = new THREE.PlaneGeometry(100, 100, 32, 32);
+            const oceanMat = new THREE.MeshToonMaterial({
+                color: '#0e1a2f',
+                roughness: 0.1,
+                shininess: 90,
+                side: THREE.DoubleSide
+            });
+            oceanMesh = new THREE.Mesh(oceanGeometry, oceanMat);
+            oceanMesh.rotation.x = -Math.PI / 2;
+            oceanMesh.position.y = -0.5;
+            scene.add(oceanMesh);
+        }
+
+        // Build Wooden Deck (Platform Sunny)
+        function initPlatform() {
+            const platformGeo = new THREE.CylinderGeometry(4.2, 4.4, 0.6, 24);
+            const woodTexture = createWoodTexture();
+            const platformMat = new THREE.MeshToonMaterial({
+                map: woodTexture,
+                roughness: 0.8
+            });
+            const platform = new THREE.Mesh(platformGeo, platformMat);
+            platform.position.y = -0.3;
+            platform.receiveShadow = true;
+            scene.add(platform);
+            
+            // Platform Outline
+            const outline = new THREE.Mesh(platformGeo, outlineMat);
+            platform.add(outline);
+        }
+
+        // Particle System (Steam for Gear 2, Fire for Red Hawk)
+        function initParticles() {
+            particleGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const scales = new Float32Array(particleCount);
+            
+            for(let i=0; i<particleCount; i++) {
+                positions[i*3] = (Math.random() - 0.5) * 2;
+                positions[i*3 + 1] = Math.random() * 4;
+                positions[i*3 + 2] = (Math.random() - 0.5) * 2;
+                scales[i] = Math.random();
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particleGeometry.setAttribute('scale', new THREE.BufferAttribute(scales, 1));
+            
+            // Build custom glowing dynamic particle texture
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.3, 'rgba(255, 192, 203, 0.8)');
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0,0,64,64);
+            const texture = new THREE.CanvasTexture(canvas);
+            
+            const mat = new THREE.PointsMaterial({
+                size: 0.45,
+                map: texture,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                color: '#ffffff'
+            });
+            
+            particleSystem = new THREE.Points(particleGeometry, mat);
+            scene.add(particleSystem);
+            particleSystem.visible = false;
+            
+            // Seed state array
+            for(let k=0; k<particleCount; k++) {
+                particles.push({
+                    x: positions[k*3],
+                    y: positions[k*3 + 1],
+                    z: positions[k*3 + 2],
+                    speedY: 0.02 + Math.random()*0.03,
+                    speedX: (Math.random()-0.5)*0.01,
+                    age: Math.random() * 100
+                });
+            }
+        }
+
+        // Update particle physics (steam rise)
+        function updateParticles() {
+            if(!particleSystem.visible) return;
+            
+            const positions = particleSystem.geometry.attributes.position.array;
+            
+            for(let i=0; i<particleCount; i++) {
+                const p = particles[i];
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.age += 1;
+                
+                // If particles go too high or expire, recycle
+                if(p.y > 5.5 || p.age > 120) {
+                    p.y = 1.0 + Math.random() * 0.5;
+                    p.x = (Math.random() - 0.5) * 1.5;
+                    p.z = (Math.random() - 0.5) * 1.5;
+                    p.age = 0;
+                    p.speedY = 0.02 + Math.random()*0.03;
+                }
+                
+                positions[i*3] = p.x;
+                positions[i*3 + 1] = p.y;
+                positions[i*3 + 2] = p.z;
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
+        // Rig update: stretch left arm dynamically to target hand
+        function updateSkeletalArm() {
+            if (!skeletalArm || !stretchyFist || !shoulderAnchor) return;
+            
+            const start = new THREE.Vector3();
+            shoulderAnchor.getWorldPosition(start);
+            
+            const end = new THREE.Vector3();
+            stretchyFist.getWorldPosition(end);
+            
+            // Distance
+            const distance = start.distanceTo(end);
+            
+            // Compute midpoint pos
+            const midPoint = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
+            
+            skeletalArm.position.copy(midPoint);
+            
+            // Orient cylinder to align with vectors
+            const direction = new THREE.Vector3().subVectors(end, start).normalize();
+            const up = new THREE.Vector3(0, 1, 0);
+            skeletalArm.quaternion.setFromUnitVectors(up, direction);
+            
+            // Scale cylinder height and thickness (rubber snaps thin as it stretches)
+            const thickness = Math.max(0.04, 0.18 - (distance * 0.012));
+            skeletalArm.scale.set(thickness / 0.18, distance, thickness / 0.18);
+        }
+
+        // HTML Panel Interactivity
+        function setupUI() {
+            const tabs = document.querySelectorAll('.blender-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Trigger dynamic 3D camera highlights
+                    const mode = tab.dataset.highlight;
+                    highlightPart(mode);
+                });
+            });
+            
+            // Ring pulse animation
+            gsap.to(window.stretchRing.scale, {
+                x: 1.6, y: 1.6, z: 1.6,
+                duration: 0.8,
+                repeat: -1,
+                yoyo: true,
+                ease: "power1.inOut"
+            });
+        }
+
+        // Highlight Mesh parts based on tutorial section selected
+        function highlightPart(part) {
+            // Restore all
+            scene.traverse((child) => {
+                if(child.isMesh && child.material !== outlineMat && child !== oceanMesh) {
+                    child.material.emissiveIntensity = 0;
+                    if(child.material.emissive) child.material.emissive.setHex(0x000000);
+                }
+            });
+
+            if (part === 'hat') {
+                gsap.to(camera.position, { x: 0, y: 5.2, z: 4.8, duration: 1.2, ease: "power2.inOut" });
+                controls.target.set(0, 4.2, 0);
+            } else if (part === 'head') {
+                gsap.to(camera.position, { x: 0, y: 4.5, z: 3.5, duration: 1.2, ease: "power2.inOut" });
+                controls.target.set(0, 3.8, 0);
+            } else if (part === 'vest') {
+                gsap.to(camera.position, { x: 0, y: 3.2, z: 4.2, duration: 1.2, ease: "power2.inOut" });
+                controls.target.set(0, 2.5, 0);
+            } else {
+                // Restore default view
+                gsap.to(camera.position, { x: 0, y: 4, z: 11, duration: 1.2, ease: "power2.inOut" });
+                controls.target.set(0, 3, 0);
+            }
+        }
+
+        // UI Controls Toggles
+        function toggleWireframe(val) {
+            allMaterials.forEach(m => m.wireframe = val);
+            hakiMat.wireframe = val;
+        }
+
+        function toggleOutlines(val) {
+            outlineMeshes.forEach(m => m.visible = val);
+        }
+
+        function changeFOV(val) {
+            fovValue = val;
+            camera.fov = val;
+            camera.updateProjectionMatrix();
+        }
+
+        function changeHakiGloss(val) {
+            hakiMat.roughness = 1.0 - (val / 100);
+        }
+
+        // GEAR TRANSFORMATIONS ENGINE
+        function changeGear(gear) {
+            if(gear === currentGear) return;
+            
+            // Flash screen
+            const flash = document.getElementById('flash-screen');
+            flash.style.background = '#ffffff';
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 200);
+
+            // Clear previous states
+            steamActive = false;
+            fireActive = false;
+            particleSystem.visible = false;
+            
+            // Reset modifications
+            skinMat.color.set('#ffdbca');
+            if(window.hagoromo) {
+                scene.remove(window.hagoromo);
+                window.hagoromo = null;
+            }
+
+            // Animate scale reset on right fist
+            gsap.to(window.rightFist.scale, { x: 1, y: 1, z: 1, duration: 0.5 });
+            gsap.to(window.rightForearm.scale, { x: 1, y: 1, z: 1, duration: 0.5 });
+            window.rightFist.material = skinMat;
+            window.rightForearm.material = skinMat;
+
+            // Remove previous active button class
+            document.querySelectorAll('.btn-gear').forEach(b => b.classList.remove('active'));
+
+            currentGear = gear;
+
+            if (gear === 'base') {
+                document.getElementById('gear-base').classList.add('active');
+                gsap.to(luffyGroup.position, { y: 0, duration: 0.5 });
+                gsap.to(camera.position, { x: 0, y: 4, z: 11, duration: 1.0 });
+                controls.target.set(0, 3, 0);
+            }
+            else if (gear === 'second') {
+                document.getElementById('gear-second').classList.add('active');
+                
+                // Rosy pink skin tint
+                gsap.to(skinMat.color, { r: 1.0, g: 0.75, b: 0.8, duration: 0.4 });
+                
+                // Steam particles activation
+                steamActive = true;
+                particleSystem.visible = true;
+                particleSystem.material.color.set('#ffd1df');
+                
+                // Pose crouch bounce
+                gsap.to(luffyGroup.position, { y: -0.15, duration: 0.4 });
+            }
+            else if (gear === 'third') {
+                document.getElementById('gear-third').classList.add('active');
+                
+                // Huge hand scaling
+                gsap.to(window.rightFist.scale, { x: 5.5, y: 5.5, z: 5.5, duration: 0.8, ease: "back.out(1.5)" });
+                gsap.to(window.rightForearm.scale, { x: 3.0, y: 1.5, z: 3.0, duration: 0.8 });
+                
+                // Apply metallic Armament Haki
+                window.rightFist.material = hakiMat;
+                window.rightForearm.material = hakiMat;
+                
+                // Dynamic camera dramatic punch angle
+                gsap.to(camera.position, { x: 5, y: 2, z: 8, duration: 1.2, ease: "power2.out" });
+                controls.target.set(1.5, 2.5, 0);
+            }
+            else if (gear === 'fourth') {
+                document.getElementById('gear-fourth').classList.add('active');
+                
+                // Gear 4 Armament Haki arms + glowing aura
+                window.rightFist.material = hakiMat;
+                window.rightForearm.material = hakiMat;
+                
+                // Spawn floating White Vapor ribbon (Hagoromo)
+                const torusGeo = new THREE.TorusKnotGeometry(1.6, 0.08, 100, 16, 3, 4);
+                const torusMat = new THREE.MeshToonMaterial({
+                    color: '#ffffff',
+                    transparent: true,
+                    opacity: 0.7,
+                    roughness: 0.3
+                });
+                window.hagoromo = new THREE.Mesh(torusGeo, torusMat);
+                window.hagoromo.position.set(0, 3.2, 0);
+                window.hagoromo.rotation.x = Math.PI / 2;
+                scene.add(window.hagoromo);
+                
+                // Levitate / Bounce animation pose
+                gsap.to(luffyGroup.position, { y: 0.8, duration: 0.5 });
+            }
+        }
+
+        // Combat Moves: Gomu Gomu no Pistol (Trigger Spring Auto-Stretch)
+        function triggerPistolAttack() {
+            // Screen shake + Action lines splash
+            triggerScreenImpact();
+
+            // Swift rubber stretch animation
+            gsap.killTweensOf(stretchyFist.position);
+            gsap.to(stretchyFist.position, {
+                x: -12.0, y: 3.5, z: 4.0,
+                duration: 0.18,
+                ease: "power2.out",
+                onUpdate: updateSkeletalArm,
+                onComplete: () => {
+                    // Elastic snap back
+                    gsap.to(stretchyFist.position, {
+                        x: originalFistPos.x,
+                        y: originalFistPos.y,
+                        z: originalFistPos.z,
+                        duration: 1.2,
+                        ease: "elastic.out(0.85, 0.3)",
+                        onUpdate: updateSkeletalArm
+                    });
+                }
+            });
+        }
+
+        // Combat Moves: Red Hawk (Ignite fist on Fire)
+        function triggerRedHawkAttack() {
+            // Flash screen deep orange
+            const flash = document.getElementById('flash-screen');
+            flash.style.background = '#f97316';
+            flash.style.opacity = '0.65';
+            setTimeout(() => { flash.style.opacity = '0'; }, 250);
+
+            // Particles trigger
+            steamActive = false;
+            fireActive = true;
+            particleSystem.visible = true;
+            particleSystem.material.color.set('#f97316');
+            
+            // Standard stretch + Ignite!
+            triggerPistolAttack();
+        }
+
+        // Screen Impact Effects
+        function triggerScreenImpact() {
+            // Action lines flash
+            const actionLines = document.getElementById('action-lines');
+            actionLines.style.opacity = '0.25';
+            actionLines.style.backgroundImage = 'radial-gradient(circle, transparent 20%, #ef4444 100%)';
+            setTimeout(() => { actionLines.style.opacity = '0'; }, 300);
+
+            // Camera Shake
+            const origX = camera.position.x;
+            const origY = camera.position.y;
+            gsap.to(camera.position, {
+                x: origX + (Math.random()-0.5)*0.8,
+                y: origY + (Math.random()-0.5)*0.8,
+                duration: 0.05,
+                repeat: 5,
+                yoyo: true,
+                onComplete: () => {
+                    camera.position.x = origX;
+                    camera.position.y = origY;
+                }
+            });
+        }
+
+        // Raycasting and Mouse coordinates converter
+        function getMouseCoords(e) {
+            const container = document.getElementById('canvas-container');
+            const rect = container.getBoundingClientRect();
+            
+            // Support touch
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            mouse.x = ((clientX - rect.left) / container.clientWidth) * 2 - 1;
+            mouse.y = -((clientY - rect.top) / container.clientHeight) * 2 + 1;
+        }
+
+        // Dragging Stretchy Fist Logic
+        function onMouseDown(e) {
+            // Only drag if left-clicking and not clicking GUI panels
+            if (e.button !== 0 || e.target.tagName === 'BUTTON' || e.target.closest('.panel')) return;
+            
+            getMouseCoords(e);
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObject(stretchyFist);
+            if (intersects.length > 0) {
+                isDragging = true;
+                controls.enabled = false; // Disable orbit controls
+                
+                // Align plane with fist depth
+                const fistWorldPos = new THREE.Vector3();
+                stretchyFist.getWorldPosition(fistWorldPos);
+                dragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), fistWorldPos);
+                
+                if (raycaster.ray.intersectPlane(dragPlane, dragOffset)) {
+                    dragOffset.sub(stretchyFist.position);
+                }
+                
+                // Toggle Banner active state
+                document.getElementById('interactive-banner').style.opacity = '0.3';
+            }
+        }
+
+        function onMouseMove(e) {
+            if (!isDragging) return;
+            
+            getMouseCoords(e);
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersectPoint = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(dragPlane, intersectPoint)) {
+                const newPos = intersectPoint.sub(dragOffset);
+                
+                // Limit maximum rubber stretch length to avoid clipping
+                const shoulderPos = new THREE.Vector3();
+                shoulderAnchor.getWorldPosition(shoulderPos);
+                const dist = newPos.distanceTo(shoulderPos);
+                
+                if(dist < 14) {
+                    stretchyFist.position.copy(newPos);
+                } else {
+                    const direction = new THREE.Vector3().subVectors(newPos, shoulderPos).normalize();
+                    stretchyFist.position.copy(shoulderPos).add(direction.multiplyScalar(14));
+                }
+                
+                updateSkeletalArm();
+            }
+        }
+
+        function onMouseUp() {
+            if (!isDragging) return;
+            isDragging = false;
+            controls.enabled = true; // Re-enable orbit controls
+            
+            // Play spring back elastic tween
+            gsap.killTweensOf(stretchyFist.position);
+            gsap.to(stretchyFist.position, {
+                x: originalFistPos.x,
+                y: originalFistPos.y,
+                z: originalFistPos.z,
+                duration: 1.2,
+                ease: "elastic.out(0.9, 0.35)",
+                onUpdate: updateSkeletalArm
+            });
+
+            document.getElementById('interactive-banner').style.opacity = '1';
+        }
+
+        // Touch Support
+        function onTouchStart(e) {
+            onMouseDown(e);
+        }
+
+        function onTouchMove(e) {
+            if(isDragging) e.preventDefault(); // prevent scrolling
+            onMouseMove(e);
+        }
+
+        function onTouchEnd() {
+            onMouseUp();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // Animation Render Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            animationTime += 0.015;
+
+            // Smooth orbit controls
+            controls.update();
+
+            // 1. Idle Breathing animation for Luffy Group
+            if (luffyGroup && !isDragging) {
+                if(currentGear === 'fourth') {
+                    // Gear 4 levitating bouncing motion
+                    luffyGroup.position.y = 0.8 + Math.sin(animationTime * 2.8) * 0.15;
+                    luffyGroup.rotation.y = Math.sin(animationTime * 0.5) * 0.05;
+                } else {
+                    // Standard breathing bobbing
+                    luffyGroup.position.y = Math.sin(animationTime * 1.5) * 0.035;
+                }
+            }
+
+            // 2. Animated Ocean Waves (Displace vertex heights)
+            if (oceanMesh) {
+                const pos = oceanGeometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    const u = pos.getX(i);
+                    const v = pos.getY(i);
+                    const z = Math.sin(u*0.2 + animationTime) * Math.cos(v*0.2 + animationTime) * 0.18;
+                    pos.setZ(i, z);
+                }
+                pos.needsUpdate = true;
+            }
+
+            // 3. Rotate Gear 4 Ribbon
+            if (window.hagoromo) {
+                window.hagoromo.rotation.z += 0.01;
+                window.hagoromo.rotation.y += 0.005;
+            }
+
+            // 4. Update steam particles
+            updateParticles();
+
+            // 5. Keep interactive stretchy arm aligned
+            updateSkeletalArm();
+
+            // Render
+            renderer.render(scene, camera);
+        }
+
+        // Execution Entrypoint
+        window.onload = () => {
+            initEngine();
+            initMaterials();
+            buildLuffyMesh();
+            initOcean();
+            initPlatform();
+            initParticles();
+            setupUI();
+            
+            // Default initial arm update
+            setTimeout(() => { updateSkeletalArm(); }, 100);
+            
+            // Kickstart loop
+            animate();
+        };
+    </script>
+</body>
+</html>

@@ -12,6 +12,18 @@ namespace BioVR.Macro
         public float brainFoldingAmplitude = 0.05f; // Fold depth
 
 
+        [System.Serializable]
+        public struct HighFidelityStructureDef
+        {
+            public string id;          // GameObject name in GLTF
+            public string displayName; // User-facing name
+            public Vector3 pullAxis;   // Direction of explode/pull (Unity coordinates: x, z, y)
+            public float pullDistance; // Distance of pull
+            public Color hoverColor;   // Interactive hover glow color
+        }
+
+        [Header("High-Fidelity Anatomical Mapping")]
+        public System.Collections.Generic.List<HighFidelityStructureDef> highFidelityStructures = new System.Collections.Generic.List<HighFidelityStructureDef>();
 
         private void Start()
         {
@@ -25,8 +37,17 @@ namespace BioVR.Macro
                 idle.rotationSpeed = 15.0f;
             }
 
-            // Build the multi-lobed ultra-realistic brain hierarchy
-            GenerateRealisticAnatomicalBrain();
+            // Populate high-fidelity list definitions dynamically
+            InitializeHighFidelityMappings();
+
+            // Try to hook up high-fidelity imported meshes from the GLB
+            bool hasHighFidelity = TryHookUpHighFidelityMeshes();
+
+            // Only build programmatic ellipsoidal fallback lobes if no high-fidelity meshes were found
+            if (!hasHighFidelity)
+            {
+                GenerateRealisticAnatomicalBrain();
+            }
         }
 
         private void Update()
@@ -77,46 +98,89 @@ namespace BioVR.Macro
 
         private void CreateLobePart(string partName, Vector3 scale, Vector3 offset, float foldFreq, float foldAmp, Color color, Vector3 pullAxis, string displayName, string structureId)
         {
-            GameObject lobeObj = new GameObject(partName);
-            lobeObj.transform.SetParent(transform, false);
-            lobeObj.transform.localPosition = offset;
-            
-            // Build procedural sphere mesh with sinusoidal folding noise
-            MeshFilter filter = lobeObj.AddComponent<MeshFilter>();
-            MeshRenderer renderer = lobeObj.AddComponent<MeshRenderer>();
-            
-            Mesh mesh = GenerateLobeMesh(scale, foldFreq, foldAmp);
-            mesh.name = partName + "_Mesh";
-            filter.sharedMesh = mesh;
+            // Try to find an existing child by name matching this anatomical structure (e.g., from imported high-fidelity Blender blend/fbx model!)
+            Transform existingChild = null;
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                Transform child = transform.GetChild(i);
+                if (child.name.ToLower().Contains(structureId.Replace("_l", "").Replace("_r", "").ToLower()) || 
+                    child.name.ToLower().Replace(" ", "_").Contains(partName.ToLower()))
+                {
+                    existingChild = child;
+                    break;
+                }
+            }
 
-            // Generate URP-compatible glowing translucent material
-            Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
-            if (unlitShader == null) unlitShader = Shader.Find("Unlit/Color");
+            GameObject lobeObj;
+            if (existingChild != null)
+            {
+                lobeObj = existingChild.gameObject;
+                Debug.Log($"[BioVR Brain] Hooked high-fidelity Blender geometry for: '{displayName}' (GameObject name: '{lobeObj.name}')");
+                
+                // Add Sphere/Box Collider to existing child if missing
+                Collider col = lobeObj.GetComponent<Collider>();
+                if (col == null)
+                {
+                    Renderer rend = lobeObj.GetComponent<Renderer>();
+                    if (rend != null)
+                    {
+                        BoxCollider bc = lobeObj.AddComponent<BoxCollider>();
+                        bc.center = lobeObj.transform.InverseTransformPoint(rend.bounds.center);
+                        bc.size = rend.bounds.size;
+                    }
+                    else
+                    {
+                        SphereCollider sc = lobeObj.AddComponent<SphereCollider>();
+                        sc.center = Vector3.zero;
+                        sc.radius = Mathf.Max(scale.x, scale.y, scale.z) * 0.5f;
+                    }
+                }
+            }
+            else
+            {
+                // FALLBACK: Generate the mathematical pink lobe meshes procedurally
+                lobeObj = new GameObject(partName);
+                lobeObj.transform.SetParent(transform, false);
+                lobeObj.transform.localPosition = offset;
+                
+                MeshFilter filter = lobeObj.AddComponent<MeshFilter>();
+                MeshRenderer renderer = lobeObj.AddComponent<MeshRenderer>();
+                
+                Mesh mesh = GenerateLobeMesh(scale, foldFreq, foldAmp);
+                mesh.name = partName + "_Mesh";
+                filter.sharedMesh = mesh;
 
-            Material mat = new Material(unlitShader);
-            mat.color = color;
-            mat.SetFloat("_Surface", 1.0f); // Transparent
-            mat.SetFloat("_Blend", 0.0f);   // Alpha blend
-            mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            mat.SetInt("_ZWrite", 0);
-            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                // Generate URP-compatible glowing translucent material
+                Shader unlitShader = Shader.Find("Universal Render Pipeline/Unlit");
+                if (unlitShader == null) unlitShader = Shader.Find("Unlit/Color");
 
-            // Apply slight emission to look holographic
-            mat.EnableKeyword("_EMISSION");
-            mat.SetColor("_EmissionColor", color * 0.15f);
-            
-            renderer.sharedMaterial = mat;
+                Material mat = new Material(unlitShader);
+                mat.color = color;
+                mat.SetFloat("_Surface", 1.0f); // Transparent
+                mat.SetFloat("_Blend", 0.0f);   // Alpha blend
+                mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                mat.SetInt("_ZWrite", 0);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
 
-            // Add standard Sphere Collider for Raycasting hover and click pulls
-            SphereCollider sc = lobeObj.AddComponent<SphereCollider>();
-            sc.center = Vector3.zero;
-            // Fits collider roughly to actual bounds
-            sc.radius = Mathf.Max(scale.x, scale.y, scale.z) * 0.5f;
+                // Apply slight emission to look holographic
+                mat.EnableKeyword("_EMISSION");
+                mat.SetColor("_EmissionColor", color * 0.15f);
+                
+                renderer.sharedMaterial = mat;
+
+                SphereCollider sc = lobeObj.AddComponent<SphereCollider>();
+                sc.center = Vector3.zero;
+                sc.radius = Mathf.Max(scale.x, scale.y, scale.z) * 0.5f;
+            }
 
             // Hook up IsolatableStructure script for interactive exploded curves
-            IsolatableStructure structure = lobeObj.AddComponent<IsolatableStructure>();
+            IsolatableStructure structure = lobeObj.GetComponent<IsolatableStructure>();
+            if (structure == null)
+            {
+                structure = lobeObj.AddComponent<IsolatableStructure>();
+            }
             structure.structureName = displayName;
             structure.structureId = structureId;
             structure.pullAxis = pullAxis;
@@ -210,6 +274,172 @@ namespace BioVR.Macro
             mesh.RecalculateTangents();
 
             return mesh;
+        }
+
+        private void InitializeHighFidelityMappings()
+        {
+            highFidelityStructures.Clear();
+
+            // Neocortex lobes
+            AddDef("Cerebrum_Left", "Left Cerebral Hemisphere", new Vector3(-0.65f, 0.0f, 0.20f), 1.2f, new Color(0.95f, 0.40f, 0.65f));
+            AddDef("Cerebrum_Right", "Right Cerebral Hemisphere", new Vector3(0.65f, 0.0f, 0.20f), 1.2f, new Color(0.95f, 0.40f, 0.65f));
+            
+            // Cerebellum
+            AddDef("Cerebellum", "Cerebellum", new Vector3(0.0f, -0.60f, -0.25f), 1.3f, new Color(0.70f, 0.18f, 0.28f));
+            
+            // Commissural/Bridging White Matter
+            AddDef("Corpus_Callosum", "Corpus Callosum", new Vector3(0.0f, 0.0f, 0.40f), 1.2f, new Color(0.95f, 0.92f, 0.88f));
+            AddDef("Fornix", "Fornix (Limbic Bridge)", new Vector3(0.0f, -0.04f, 0.28f), 1.3f, new Color(0.95f, 0.92f, 0.88f));
+            AddDef("Pineal_Stalks", "Pineal Stalks", new Vector3(0.0f, -0.24f, 0.06f), 1.2f, new Color(0.95f, 0.92f, 0.88f));
+            AddDef("Spinal_Nerve_Rootlets", "Spinal Nerve Rootlets", new Vector3(0.0f, -0.16f, -0.70f), 1.3f, new Color(0.95f, 0.92f, 0.88f));
+
+            // Thalamus and adhesion
+            AddDef("Thalamus_Left", "Left Thalamus", new Vector3(-0.20f, 0.08f, 0.15f), 1.3f, new Color(0.42f, 0.32f, 0.85f));
+            AddDef("Thalamus_Right", "Right Thalamus", new Vector3(0.20f, 0.08f, 0.15f), 1.3f, new Color(0.42f, 0.32f, 0.85f));
+            AddDef("Interthalamic_Adhesion", "Interthalamic Adhesion", new Vector3(0.0f, 0.04f, 0.20f), 1.2f, new Color(0.42f, 0.32f, 0.85f));
+
+            // Basal Ganglia
+            AddDef("Caudate_Left", "Left Caudate Nucleus", new Vector3(-0.30f, 0.04f, 0.25f), 1.3f, new Color(0.98f, 0.44f, 0.52f));
+            AddDef("Caudate_Right", "Right Caudate Nucleus", new Vector3(0.30f, 0.04f, 0.25f), 1.3f, new Color(0.98f, 0.44f, 0.52f));
+            AddDef("Putamen_Left", "Left Putamen", new Vector3(-0.40f, -0.04f, 0.12f), 1.3f, new Color(0.88f, 0.11f, 0.28f));
+            AddDef("Putamen_Right", "Right Putamen", new Vector3(0.40f, -0.04f, 0.12f), 1.3f, new Color(0.88f, 0.11f, 0.28f));
+            AddDef("Globus_Pallidus_Left", "Left Globus Pallidus", new Vector3(-0.26f, -0.04f, 0.08f), 1.3f, new Color(0.99f, 0.64f, 0.69f));
+            AddDef("Globus_Pallidus_Right", "Right Globus Pallidus", new Vector3(0.26f, -0.04f, 0.08f), 1.3f, new Color(0.99f, 0.64f, 0.69f));
+            
+            // Limbic & Reward Systems
+            AddDef("Nucleus_Accumbens_Left", "Left Nucleus Accumbens", new Vector3(-0.30f, 0.16f, -0.04f), 1.3f, new Color(0.02f, 0.84f, 0.63f));
+            AddDef("Nucleus_Accumbens_Right", "Right Nucleus Accumbens", new Vector3(0.30f, 0.16f, -0.04f), 1.3f, new Color(0.02f, 0.84f, 0.63f));
+            AddDef("Hippocampus_Left", "Left Hippocampus", new Vector3(-0.30f, 0.12f, -0.08f), 1.3f, new Color(0.10f, 0.68f, 0.48f));
+            AddDef("Hippocampus_Right", "Right Hippocampus", new Vector3(0.30f, 0.12f, -0.08f), 1.3f, new Color(0.10f, 0.68f, 0.48f));
+            AddDef("Amygdala_Left", "Left Amygdala", new Vector3(-0.34f, 0.20f, -0.12f), 1.3f, new Color(0.10f, 0.68f, 0.48f));
+            AddDef("Amygdala_Right", "Right Amygdala", new Vector3(0.34f, 0.20f, -0.12f), 1.3f, new Color(0.10f, 0.68f, 0.48f));
+
+            // Homeostatic / Endocrine Control Systems
+            AddDef("Hypothalamus", "Hypothalamus", new Vector3(0.0f, 0.16f, 0.08f), 1.3f, new Color(0.95f, 0.42f, 0.08f));
+            AddDef("Infundibulum_Stalk", "Infundibular Stalk", new Vector3(0.0f, 0.20f, -0.04f), 1.3f, new Color(0.95f, 0.42f, 0.08f));
+            AddDef("Pituitary_Gland", "Pituitary Gland", new Vector3(0.0f, 0.28f, -0.12f), 1.3f, new Color(0.08f, 0.68f, 0.85f));
+            AddDef("Pineal_Gland", "Pineal Gland", new Vector3(0.0f, -0.28f, 0.08f), 1.3f, new Color(0.92f, 0.78f, 0.12f));
+
+            // Brainstem Structures
+            AddDef("Midbrain", "Midbrain (Mesencephalon)", new Vector3(0.0f, 0.12f, -0.08f), 1.3f, new Color(0.55f, 0.62f, 0.70f));
+            AddDef("Pons", "Pons", new Vector3(0.0f, 0.20f, -0.16f), 1.3f, new Color(0.55f, 0.62f, 0.70f));
+            AddDef("Medulla_Oblongata", "Medulla Oblongata", new Vector3(0.0f, 0.12f, -0.32f), 1.3f, new Color(0.55f, 0.62f, 0.70f));
+            AddDef("Spinal_Cord", "Spinal Cord (CNS Axis)", new Vector3(0.0f, -0.08f, -0.55f), 1.3f, new Color(0.55f, 0.62f, 0.70f));
+            
+            // Midbrain specialized dopaminergic/motor cores
+            AddDef("VTA", "Ventral Tegmental Area (VTA)", new Vector3(0.0f, 0.08f, -0.08f), 1.3f, new Color(0.96f, 0.62f, 0.04f));
+            AddDef("Substantia_Nigra_Left", "Left Substantia Nigra", new Vector3(-0.12f, 0.04f, -0.12f), 1.3f, new Color(0.28f, 0.33f, 0.41f));
+            AddDef("Substantia_Nigra_Right", "Right Substantia Nigra", new Vector3(0.12f, 0.04f, -0.12f), 1.3f, new Color(0.28f, 0.33f, 0.41f));
+        }
+
+        private void AddDef(string id, string name, Vector3 pullAxis, float distance, Color color)
+        {
+            HighFidelityStructureDef def = new HighFidelityStructureDef();
+            def.id = id;
+            def.displayName = name;
+            def.pullAxis = pullAxis;
+            def.pullDistance = distance;
+            def.hoverColor = color;
+            highFidelityStructures.Add(def);
+        }
+
+        private bool TryHookUpHighFidelityMeshes()
+        {
+            bool foundAny = false;
+
+            // Dictionary for O(1) matching speed
+            var defs = new System.Collections.Generic.Dictionary<string, HighFidelityStructureDef>();
+            foreach (var def in highFidelityStructures)
+            {
+                defs[def.id.ToLower()] = def;
+            }
+
+            // Traverse recursively to handle imported GLTF prefab structures nested deep in parent
+            System.Collections.Generic.List<Transform> allChildren = new System.Collections.Generic.List<Transform>();
+            GetChildrenRecursive(transform, allChildren);
+
+            foreach (Transform child in allChildren)
+            {
+                string childName = child.name.ToLower();
+                HighFidelityStructureDef matchedDef;
+                bool isMatch = false;
+
+                if (defs.TryGetValue(childName, out matchedDef))
+                {
+                    isMatch = true;
+                }
+                else
+                {
+                    // Loose prefix/contains checking to handle import suffixes gracefully
+                    foreach (var pair in defs)
+                    {
+                        if (childName.Contains(pair.Key.ToLower()))
+                        {
+                            matchedDef = pair.Value;
+                            isMatch = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isMatch)
+                {
+                    foundAny = true;
+                    HookUpHighFidelityPart(child.gameObject, matchedDef);
+                }
+            }
+
+            if (foundAny)
+            {
+                Debug.Log($"[BioVR Brain] Successfully initialized high-fidelity interactive hooks for custom GLB meshes.");
+            }
+            return foundAny;
+        }
+
+        private void GetChildrenRecursive(Transform parent, System.Collections.Generic.List<Transform> list)
+        {
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                list.Add(child);
+                GetChildrenRecursive(child, list);
+            }
+        }
+
+        private void HookUpHighFidelityPart(GameObject partObj, HighFidelityStructureDef def)
+        {
+            Debug.Log($"[BioVR Brain] Hooking interactive scripts to high-fidelity node: '{def.displayName}' ({partObj.name})");
+
+            // 1. Ensure Raycasting physics collider is present
+            Collider col = partObj.GetComponent<Collider>();
+            if (col == null)
+            {
+                Renderer rend = partObj.GetComponent<Renderer>();
+                if (rend != null)
+                {
+                    BoxCollider bc = partObj.AddComponent<BoxCollider>();
+                    bc.center = partObj.transform.InverseTransformPoint(rend.bounds.center);
+                    bc.size = rend.bounds.size;
+                }
+                else
+                {
+                    SphereCollider sc = partObj.AddComponent<SphereCollider>();
+                    sc.center = Vector3.zero;
+                    sc.radius = 0.5f;
+                }
+            }
+
+            // 2. Attach IsolatableStructure components for exploded views
+            IsolatableStructure structure = partObj.GetComponent<IsolatableStructure>();
+            if (structure == null)
+            {
+                structure = partObj.AddComponent<IsolatableStructure>();
+            }
+            structure.structureName = def.displayName;
+            structure.structureId = def.id;
+            structure.pullAxis = def.pullAxis;
+            structure.pullDistance = def.pullDistance;
+            structure.hoverGlowColor = def.hoverColor;
         }
     }
 }

@@ -107,6 +107,8 @@ import time
 import random
 import threading
 import subprocess
+import urllib.request
+import urllib.parse
 
 PORT = 3000
 jobs = {}
@@ -126,6 +128,80 @@ def get_actual_gpu_telemetry():
     except Exception:
         pass
     return None
+
+def fetch_pubchem_3d(compound_name):
+    try:
+        safe_name = urllib.parse.quote(compound_name.strip())
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{safe_name}/JSON?record_type=3d"
+        
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) BioVR/1.0'}
+        )
+        
+        with urllib.request.urlopen(req, timeout=8.0) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            
+        if "PC_Compounds" not in data or not data["PC_Compounds"]:
+            return None
+            
+        compound = data["PC_Compounds"][0]
+        
+        element_map = {
+            1: "H", 6: "C", 7: "N", 8: "O", 9: "F", 15: "P", 16: "S", 17: "Cl", 35: "Br", 53: "I"
+        }
+        
+        aid_to_element = {}
+        aid_list = compound.get("atoms", {}).get("aid", [])
+        element_list = compound.get("atoms", {}).get("element", [])
+        
+        for aid, el_num in zip(aid_list, element_list):
+            aid_to_element[aid] = element_map.get(el_num, "C")
+            
+        atoms_out = []
+        coords_list = compound.get("coords", [])
+        if not coords_list:
+            return None
+            
+        conformer = coords_list[0].get("conformers", [])
+        if not conformer:
+            return None
+            
+        x_coords = conformer[0].get("x", [])
+        y_coords = conformer[0].get("y", [])
+        z_coords = conformer[0].get("z", [])
+        coord_aids = coords_list[0].get("aid", [])
+        
+        aid_to_idx = {}
+        for idx, (aid, x, y, z) in enumerate(zip(coord_aids, x_coords, y_coords, z_coords)):
+            aid_to_idx[aid] = idx
+            atoms_out.append({
+                "element": aid_to_element.get(aid, "C"),
+                "x": float(x),
+                "y": float(y),
+                "z": float(z)
+            })
+            
+        bonds_out = []
+        bonds_data = compound.get("bonds", {})
+        aid1_list = bonds_data.get("aid1", [])
+        aid2_list = bonds_data.get("aid2", [])
+        order_list = bonds_data.get("order", [])
+        
+        for aid1, aid2, order in zip(aid1_list, aid2_list, order_list):
+            if aid1 in aid_to_idx and aid2 in aid_to_idx:
+                bonds_out.append({
+                    "atom1": aid_to_idx[aid1],
+                    "atom2": aid_to_idx[aid2],
+                    "order": int(order)
+                })
+                
+        return {
+            "atoms": atoms_out,
+            "bonds": bonds_out
+        }
+    except Exception:
+        return None
 
 class GcpMockServerHandler(http.server.BaseHTTPRequestHandler):
     def _set_headers(self, status_code=200):
@@ -150,6 +226,8 @@ class GcpMockServerHandler(http.server.BaseHTTPRequestHandler):
                 entity_name = payload.get('simulation_parameters', {}).get('entity_identifiers', ['Dopamine'])[0]
                 target_steps = payload.get('simulation_parameters', {}).get('target_steps', 200)
 
+                structure = fetch_pubchem_3d(entity_name)
+
                 jobs[job_id] = {
                     'job_id': job_id,
                     'entity_name': entity_name,
@@ -158,7 +236,8 @@ class GcpMockServerHandler(http.server.BaseHTTPRequestHandler):
                     'current_step': 0,
                     'status': 'RUNNING',
                     'start_time': time.time(),
-                    'checkpoints': []
+                    'checkpoints': [],
+                    'structure': structure
                 }
                 res = {
                     "job_id": job_id,
@@ -214,7 +293,9 @@ class GcpMockServerHandler(http.server.BaseHTTPRequestHandler):
                         "quota_session_limit_seconds": 5400
                     },
                     "checkpoint_history": history,
-                    "compiled_asset_url": f"gs://biovr-assets/{job['entity_name'].lower()}_structure.pdb" if job['status'] == 'COMPLETED' else ""
+                    "compiled_asset_url": f"gs://biovr-assets/{job['entity_name'].lower()}_structure.pdb" if job['status'] == 'COMPLETED' else "",
+                    "atoms": job['structure']['atoms'] if job.get('structure') else [],
+                    "bonds": job['structure']['bonds'] if job.get('structure') else []
                 }
                 self._set_headers(200)
                 self.wfile.write(json.dumps(res).encode('utf-8'))

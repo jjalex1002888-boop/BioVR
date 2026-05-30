@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Banana Run 2D - Endless Primate Escape</title>
+    <meta name="description" content="Help the agile monkey escape the human chaser in the deep jungle! Jump, slide, dodge obstacles, collect bananas, and unlock premium cyberpunk, lava, and gold skins in this fully 2D endless runner.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Main Game Context Container -->
+    <div id="game-container">
+        
+        <!-- 2D Canvas -->
+        <canvas id="canvas2d"></canvas>
+
+        <!-- Float Mute Button -->
+        <div id="mute-btn" title="Toggle Sound">🔊</div>
+
+        <!-- Damage Hit Screen Flash -->
+        <div id="damage-flash"></div>
+
+        <!-- Stumble Chaser Pulsing Warning -->
+        <div id="stumble-warning" class="hidden"></div>
+
+        <!-- Dynamic In-Game HUD Panel -->
+        <div id="hud" class="hidden">
+            <!-- Top Left: Scores -->
+            <div class="hud-panel hud-score-box">
+                <span class="score-title">Score</span>
+                <span id="hud-score" class="score-val">0</span>
+            </div>
+
+            <!-- Top Right: Bananas & Distance -->
+            <div class="hud-panel hud-stats-group">
+                <div class="stat-item">
+                    <span class="stat-icon">🍌</span>
+                    <span id="hud-bananas" class="stat-text">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-icon">🏃</span>
+                    <span id="hud-distance" class="stat-text">0m</span>
+                </div>
+            </div>
+
+            <!-- Active Shield Indicator -->
+            <div id="hud-shield-indicator" class="hidden" title="Shield Active!">🛡️</div>
+        </div>
+
+        <!-- HUD: Active Power-up Progress indicators (Bottom Left) -->
+        <div id="powerup-indicators">
+            <!-- Magnet -->
+            <div class="powerup-bar-container hidden">
+                <div class="powerup-bar-header">
+                    <span>🧲 Banana Magnet</span>
+                </div>
+                <div class="bar-bg">
+                    <div id="magnet-progress" class="bar-fill" style="width: 100%"></div>
+                </div>
+            </div>
+            <!-- Sprint Boost -->
+            <div class="powerup-bar-container hidden">
+                <div class="powerup-bar-header">
+                    <span>⚡ Jungle Sprint Boost</span>
+                </div>
+                <div class="bar-bg">
+                    <div id="boost-progress" class="bar-fill" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HUD: Screen announcements (Middle) -->
+        <div id="hud-powerup-announcer">MAGNET ACTIVATED!</div>
+
+        <!-- SCREEN: Start / Main Menu Screen Overlay -->
+        <div id="start-screen" class="ui-overlay">
+            <div class="glass-panel">
+                <h1>Banana Run 2D</h1>
+                <div class="subtitle">Endless Escape</div>
+                
+                <p>Run, slide, and vault through ancient jungle ruins! Dodge the human explorer chaser and collect glowing gold bananas.</p>
+                
+                <div class="tutorial-keys">
+                    <div class="kbd-key">A / ◀ Lane L</div>
+                    <div class="kbd-key">D / ▶ Lane R</div>
+                    <div class="kbd-key">W / ▲ Jump</div>
+                    <div class="kbd-key">S / ▼ Slide</div>
+                </div>
+
+                <div class="flex-column" style="margin-bottom: 20px;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px;">Personal Best</div>
+                    <div id="menu-highscore" style="font-family: var(--font-heading); font-weight: 900; font-size: 2rem; color: var(--gold-accent);">0</div>
+                </div>
+
+                <button id="btn-start-run" class="btn-primary">Start Run</button>
+                
+                <div class="btn-group-row">
+                    <button id="btn-open-shop" class="btn-secondary">Skins Shop</button>
+                    <button id="btn-open-settings" class="btn-secondary">Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: Dynamic Skins Upgrades Shop Panel Overlay -->
+        <div id="shop-screen" class="ui-overlay hidden">
+            <div class="glass-panel shop-panel">
+                <div class="shop-header">
+                    <h2>Skins Customization</h2>
+                    <div class="shop-currency">
+                        <span>🍌</span>
+                        <span id="total-bananas-menu">0</span>
+                    </div>
+                </div>
+
+                <!-- Dyn Shop catalog container -->
+                <div id="shop-catalog" class="shop-catalog-row">
+                    <!-- Cards will be populated dynamically by JS -->
+                </div>
+
+                <button id="btn-close-shop" class="btn-secondary" style="max-width: 250px; margin: 0 auto;">Back to Menu</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: Graphics Settings Overlay -->
+        <div id="settings-screen" class="ui-overlay hidden">
+            <div class="glass-panel">
+                <h2>Game Settings</h2>
+                <div class="subtitle">Configuration</div>
+                
+                <div id="settings-panel">
+                    <div class="setting-row">
+                        <span class="setting-label">Performance / Shadows</span>
+                        <div class="setting-control">
+                            <select id="setting-graphics">
+                                <option value="high">High Quality (Shadows/Particles)</option>
+                                <option value="low">Low Quality (Fast)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <span class="setting-label">Music Track tempo</span>
+                        <div class="setting-control">
+                            <select id="setting-music">
+                                <option value="adaptive">Dynamic / Speed scales</option>
+                                <option value="static">Static pace</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-close-settings" class="btn-primary">Save & Exit</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: Pause Overlay -->
+        <div id="pause-screen" class="ui-overlay hidden">
+            <div class="glass-panel">
+                <h2>Game Paused</h2>
+                <div class="subtitle">Take a breather</div>
+                <p>Escaped chaser is waiting just around the corner...</p>
+                <button id="btn-resume" class="btn-primary">Resume Run</button>
+                <button id="btn-quit" class="btn-secondary">Quit to Menu</button>
+            </div>
+        </div>
+
+        <!-- SCREEN: Game Over Summary Overlay -->
+        <div id="gameover-screen" class="ui-overlay hidden">
+            <div class="glass-panel" style="border-color: rgba(255, 51, 51, 0.3); box-shadow: 0 12px 40px rgba(255, 51, 51, 0.2);">
+                <h2 style="color: var(--danger-red); font-size: 2.2rem; text-shadow: 0 4px 15px rgba(255,51,51,0.3);">Caught by Chaser!</h2>
+                <div class="subtitle" style="color: rgba(255,51,51,0.7);">Game Over</div>
+
+                <!-- Final Stats Grid -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 30px 0; background: rgba(255, 255, 255, 0.03); border-radius: 16px; padding: 15px;">
+                    <div>
+                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Score</div>
+                        <div id="final-score" style="font-family: var(--font-heading); font-weight: 900; font-size: 1.6rem; color: var(--gold-accent);">0</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Distance</div>
+                        <div id="final-distance" style="font-family: var(--font-heading); font-weight: 900; font-size: 1.6rem;">0m</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Bananas</div>
+                        <div id="final-bananas" style="font-family: var(--font-heading); font-weight: 900; font-size: 1.6rem; color: var(--green-accent);">0</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 25px;">
+                    <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">High Score: </span>
+                    <span id="gameover-highscore" style="font-family: var(--font-heading); font-weight: 800; font-size: 1.1rem; color: var(--gold-accent);">0</span>
+                </div>
+
+                <button id="btn-restart" class="btn-primary">Run Again</button>
+                <button id="btn-back-menu" class="btn-secondary">Main Menu</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Interface DOM Connector module -->
+    <script type="module">
+        import { state } from './js/state.js';
+        import { audio } from './js/audio.js';
+        import { game } from './js/game.js';
+
+        // 1. Initialize Game engine in 2D canvas
+        game.init('canvas2d');
+
+        // 2. Synchronize main menu High Score display
+        const refreshMenuStats = () => {
+            document.getElementById('menu-highscore').innerText = state.highScore;
+            document.getElementById('total-bananas-menu').innerText = state.totalBananas;
+        };
+        refreshMenuStats();
+
+        // 3. Setup Button Event Listeners
+        document.getElementById('btn-start-run').addEventListener('click', () => {
+            game.startGame();
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            game.startGame();
+        });
+
+        document.getElementById('btn-back-menu').addEventListener('click', () => {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            game.previewActive = true;
+            game.resetEnvironment();
+            refreshMenuStats();
+        });
+
+        // Pause / Unpause click bindings
+        document.getElementById('btn-resume').addEventListener('click', () => {
+            game.togglePause();
+        });
+
+        document.getElementById('btn-quit').addEventListener('click', () => {
+            document.getElementById('pause-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            game.previewActive = true;
+            game.resetEnvironment();
+            refreshMenuStats();
+        });
+
+        // Key Escape toggles pause state
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+                game.togglePause();
+            }
+        });
+
+        // Settings Screen toggles
+        document.getElementById('btn-open-settings').addEventListener('click', () => {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('settings-screen').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-close-settings').addEventListener('click', () => {
+            const graphics = document.getElementById('setting-graphics').value;
+            state.graphicsQuality = graphics;
+            game.resetEnvironment(); // refresh graphics in engine
+
+            document.getElementById('settings-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        });
+
+        // 4. FLOATING AUDIO TOGGLER
+        const muteBtn = document.getElementById('mute-btn');
+        muteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const muted = audio.toggleMute();
+            muteBtn.innerText = muted ? '🔇' : '🔊';
+            muteBtn.style.boxShadow = muted ? 'none' : '0 0 10px rgba(255,255,255,0.2)';
+        });
+
+        // 5. SKINS CUSTOMIZATION SHOP POPULATION
+        const shopCatalog = document.getElementById('shop-catalog');
+        
+        const renderShop = () => {
+            shopCatalog.innerHTML = '';
+            
+            Object.keys(state.skinsCatalog).forEach(id => {
+                const skin = state.skinsCatalog[id];
+                const isOwned = state.purchasedSkins.includes(id);
+                const isSelected = state.activeSkin === id;
+                
+                const card = document.createElement('div');
+                card.className = `skin-card ${isSelected ? 'selected' : ''}`;
+                
+                let tagText = '';
+                if (isSelected) tagText = 'Active';
+                else if (isOwned) tagText = 'Owned';
+
+                let actionBtnHTML = '';
+                if (isSelected) {
+                    actionBtnHTML = `<button class="btn-buy-select owned">Active</button>`;
+                } else if (isOwned) {
+                    actionBtnHTML = `<button class="btn-buy-select select" data-skin="${id}">Equip</button>`;
+                } else {
+                    actionBtnHTML = `<button class="btn-buy-select buy" data-skin="${id}">Buy</button>`;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        ${tagText ? `<span class="skin-card-tag">${tagText}</span>` : ''}
+                        <div class="skin-name">${skin.name}</div>
+                        <div class="skin-desc">${skin.description}</div>
+                    </div>
+                    <div class="skin-price-buy">
+                        <div class="price-text">
+                            ${isOwned ? '' : `<span>🍌</span> ${skin.price}`}
+                        </div>
+                        ${actionBtnHTML}
+                    </div>
+                `;
+                
+                // Add event listeners on buttons
+                const btn = card.querySelector('.btn-buy-select');
+                if (btn && !btn.classList.contains('owned')) {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const skinId = btn.getAttribute('data-skin');
+                        
+                        if (btn.classList.contains('select')) {
+                            state.selectSkin(skinId);
+                            audio.playCollect();
+                        } else if (btn.classList.contains('buy')) {
+                            const res = state.purchaseSkin(skinId);
+                            if (res.success) {
+                                audio.playShield();
+                            } else {
+                                alert(res.reason);
+                            }
+                        }
+                        
+                        game.resetEnvironment();
+                        renderShop();
+                        refreshMenuStats();
+                    });
+                }
+
+                shopCatalog.appendChild(card);
+            });
+        };
+
+        // Open Shop panels click binding
+        document.getElementById('btn-open-shop').addEventListener('click', () => {
+            renderShop();
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('shop-screen').classList.remove('hidden');
+        });
+
+        document.getElementById('btn-close-shop').addEventListener('click', () => {
+            document.getElementById('shop-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            refreshMenuStats();
+        });
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gear Chronicles: Monkey D. Luffy 2D Interactive Animation</title>
+    <meta name="description" content="Witness the power of Monkey D. Luffy in this interactive 2D HTML5 canvas animation! Experience Gear 2, Gear 4, Gear 5, and the iconic Gum-Gum Red Hawk with stunning procedural effects and sound synthesis.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Cinzel:wght@600;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="logo-area">
+                <span class="skull-icon">☠️</span>
+                <h1 class="app-title">GEAR CHRONICLES</h1>
+                <span class="sub-badge">Monkey D. Luffy 2D Rig</span>
+            </div>
+            <div class="controls-header">
+                <div class="scene-selector-wrapper">
+                    <label for="scene-preset">Scene Background:</label>
+                    <select id="scene-preset">
+                        <option value="cyber">Cyber Grid (Abstract)</option>
+                        <option value="sunny">Thousand Sunny Deck</option>
+                        <option value="wano" selected>Wano Roof (Full Moon)</option>
+                        <option value="marineford">Marineford Icefield</option>
+                        <option value="dark">Dynamic Void (Focus)</option>
+                    </select>
+                </div>
+                <button id="sfx-toggle-btn" class="header-btn" title="Toggle audio synthesis">
+                    <span class="icon">🔊</span> <span class="label">Sound FX: ON</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-content">
+            <!-- LEFT PANEL: CONTROL CENTER -->
+            <aside class="panel left-panel" aria-label="Transformation and Action Controls">
+                <section class="control-group">
+                    <h2 class="section-title">GEAR TRANSFORMATION</h2>
+                    <div class="grid-buttons">
+                        <button id="gear-base-btn" class="action-btn active" data-gear="base">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Base Form</span>
+                        </button>
+                        <button id="gear-2-btn" class="action-btn" data-gear="2">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Gear 2 <small>Jet</small></span>
+                        </button>
+                        <button id="gear-4-btn" class="action-btn" data-gear="4">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Gear 4 <small>Boundman</small></span>
+                        </button>
+                        <button id="gear-5-btn" class="action-btn" data-gear="5">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Gear 5 <small>Nika</small></span>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="control-group">
+                    <h2 class="section-title">ATTACK ARCHIVES</h2>
+                    <div class="list-buttons">
+                        <button id="atk-pistol-btn" class="action-btn attack-btn" data-attack="pistol">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Gum-Gum Pistol</span>
+                        </button>
+                        <button id="atk-gatling-btn" class="action-btn attack-btn" data-attack="gatling">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">Gum-Gum Gatling</span>
+                        </button>
+                        <button id="atk-redhawk-btn" class="action-btn attack-btn primary-attack" data-attack="redhawk">
+                            <span class="btn-glow"></span>
+                            <span class="btn-text">🔥 Gum-Gum Red Hawk 🔥</span>
+                        </button>
+                    </div>
+                </section>
+                
+                <section class="control-group text-tutorial">
+                    <h2 class="section-title">INTERACTION GUIDE</h2>
+                    <p>Trigger forms and attacks manually at any time! Use the timeline scrubber at the bottom to watch the choreographed 10-second cinematic showpiece or scrub forward/backward in time.</p>
+                </section>
+            </aside>
+
+            <!-- VIEWPORT: CANVAS DISPLAY -->
+            <section class="viewport-section" aria-label="Animation Canvas">
+                <div class="canvas-wrapper">
+                    <canvas id="luffy-canvas"></canvas>
+                    <div class="camera-lens-flare"></div>
+                    <div class="vignette"></div>
+                    <div id="canvas-overlay-text" class="canvas-overlay-text">Base Form</div>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: DYNAMIC STAT MONITOR -->
+            <aside class="panel right-panel" aria-label="Luffy Telemetry Monitor">
+                <section class="control-group">
+                    <h2 class="section-title">TELEMETRY MONITOR</h2>
+                    <div class="stat-card">
+                        <div class="stat-row">
+                            <span class="stat-label">Haki Intensity</span>
+                            <span class="stat-value" id="stat-haki">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="bar-haki" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-row">
+                            <span class="stat-label">Rubber Elasticity</span>
+                            <span class="stat-value" id="stat-elasticity">100%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="bar-elasticity" style="width: 100%; background: #ffd23f;"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-row">
+                            <span class="stat-label">Blood Flow (Pumping)</span>
+                            <span class="stat-value" id="stat-bpm">72 BPM</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="bar-bpm" style="width: 30%; background: #ff2e56;"></div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-row">
+                            <span class="stat-label">Nika Liberation Index</span>
+                            <span class="stat-value" id="stat-liberation">0%</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="bar-liberation" style="width: 0%; background: #e0f2fe;"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="control-group telemetry-log">
+                    <h2 class="section-title">SYSTEM COMBAT LOG</h2>
+                    <div class="log-console" id="log-console">
+                        <div class="log-line system">[SYS] Rig initialized successfully. Standing by.</div>
+                        <div class="log-line character">[LUFFY] I'm gonna be the Pirate King! 🏴‍☠️</div>
+                    </div>
+                </section>
+            </aside>
+        </main>
+
+        <!-- FOOTER: CINEMATIC TIMELINE -->
+        <footer class="app-timeline">
+            <div class="timeline-controls">
+                <button id="play-pause-btn" class="timeline-btn" title="Play or Pause cinematic sequence">
+                    <span class="icon">▶</span> <span class="label">Play Showpiece</span>
+                </button>
+                <div class="timeline-meta">
+                    <span class="time-display" id="time-display">0.0s / 10.0s</span>
+                </div>
+            </div>
+            
+            <div class="scrubber-wrapper">
+                <input type="range" id="timeline-scrubber" min="0" max="10" step="0.01" value="0">
+                <div class="timeline-markers">
+                    <div class="marker" style="left: 0%" data-label="0s: Idle Start"></div>
+                    <div class="marker" style="left: 20%" data-label="2s: Gear 2 Jet"></div>
+                    <div class="marker" style="left: 40%" data-label="4s: Red Hawk Wind-up"></div>
+                    <div class="marker" style="left: 55%" data-label="5.5s: Impact Explosion"></div>
+                    <div class="marker" style="left: 70%" data-label="7s: Gear 5 Nika"></div>
+                    <div class="marker" style="left: 100%" data-label="10s: Joyboy Outro"></div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="audio-synth.js"></script>
+    <script src="luffy-rig.js"></script>
+    <script src="fx-engine.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

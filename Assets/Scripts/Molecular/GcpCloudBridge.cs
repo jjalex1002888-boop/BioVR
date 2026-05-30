@@ -25,6 +25,23 @@ namespace BioVR.Molecular
     }
 
     [System.Serializable]
+    public class AtomData
+    {
+        public string element;
+        public float x;
+        public float y;
+        public float z;
+    }
+
+    [System.Serializable]
+    public class BondData
+    {
+        public int atom1;
+        public int atom2;
+        public int order;
+    }
+
+    [System.Serializable]
     public class JobStatusResponse
     {
         public string job_id;
@@ -34,6 +51,8 @@ namespace BioVR.Molecular
         public PerformanceMetrics performance_metrics;
         public List<Checkpoint> checkpoint_history;
         public string compiled_asset_url;
+        public List<AtomData> atoms;
+        public List<BondData> bonds;
     }
 
     [System.Serializable]
@@ -57,6 +76,10 @@ namespace BioVR.Molecular
         public string activeJobStatus = "OFFLINE";
         public int currentStep = 0;
         public int totalSteps = 200;
+
+        [Header("Live Molecular Data")]
+        public List<AtomData> activeAtoms = new List<AtomData>();
+        public List<BondData> activeBonds = new List<BondData>();
 
         [Header("GPU Performance Metrics")]
         public float quotaConsumedPercentage = 0f;
@@ -128,6 +151,8 @@ namespace BioVR.Molecular
             currentStep = 0;
             totalSteps = 200;
             elapsedSeconds = 0;
+            activeAtoms.Clear();
+            activeBonds.Clear();
 
             List<Checkpoint> history = new List<Checkpoint>();
 
@@ -230,6 +255,12 @@ namespace BioVR.Molecular
                         activeJobStatus = res.status;
                         currentStep = res.current_step;
                         totalSteps = res.total_steps;
+
+                        if (res.atoms != null) activeAtoms = res.atoms;
+                        else activeAtoms.Clear();
+
+                        if (res.bonds != null) activeBonds = res.bonds;
+                        else activeBonds.Clear();
 
                         if (res.performance_metrics != null)
                         {

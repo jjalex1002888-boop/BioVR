@@ -1,0 +1,468 @@
+:root {
+    --bg-dark: #0b0d19;
+    --font-heading: 'Luckiest Guy', cursive;
+    --font-body: 'Outfit', sans-serif;
+    
+    /* Harmonious HSL Theme Palette */
+    --primary-monkey: hsl(28, 54%, 48%);
+    --primary-monkey-light: hsl(28, 62%, 65%);
+    --accent-blue: hsl(210, 95%, 55%);
+    --accent-blue-glow: hsl(210, 95%, 65%);
+    --accent-green: hsl(145, 80%, 42%);
+    --accent-green-glow: hsl(145, 85%, 55%);
+    --accent-red: hsl(355, 85%, 52%);
+    --accent-red-glow: hsl(355, 90%, 65%);
+    --accent-gold: hsl(45, 95%, 50%);
+    --accent-gold-glow: hsl(45, 98%, 62%);
+
+    --glass-bg: rgba(14, 18, 36, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-glow: rgba(56, 125, 255, 0.15);
+    --text-main: #f0f4fc;
+    --text-muted: #8e9bb8;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-dark);
+    font-family: var(--font-body);
+    color: var(--text-main);
+}
+
+/* 3D Viewport container */
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* UI Overlay Layer */
+#ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    pointer-events: none; /* Let clicks pass to 3D canvas unless on interactive UI */
+    display: grid;
+    grid-template-columns: 320px 1fr 320px;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 
+        "header header header"
+        "left-panel empty right-panel"
+        "footer footer footer";
+    padding: 24px;
+    gap: 24px;
+}
+
+/* Ensure interactive elements register clicks */
+.glass-card, .app-header, button {
+    pointer-events: auto;
+}
+
+/* Glassmorphism base cards */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    padding: 20px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5), 0 0 15px var(--glass-glow);
+}
+
+/* Header UI styling */
+.app-header {
+    grid-area: header;
+    text-align: center;
+    align-self: start;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+.glow-text {
+    font-family: var(--font-heading);
+    font-size: 3rem;
+    letter-spacing: 2px;
+    color: var(--text-main);
+    text-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.2), 
+        0 4px 0 hsl(28, 54%, 30%),
+        0 8px 0 rgba(0, 0, 0, 0.6);
+    transform: rotate(-1deg);
+    display: inline-block;
+    animation: header-wiggle 4s ease-in-out infinite alternate;
+}
+
+.subtitle {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--accent-blue-glow);
+    text-transform: uppercase;
+    margin-top: 4px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* Panels */
+.side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.left-panel {
+    grid-area: left-panel;
+    --glass-glow: rgba(145, 80, 42, 0.15);
+}
+
+.right-panel {
+    grid-area: right-panel;
+    --glass-glow: rgba(56, 125, 255, 0.15);
+}
+
+.panel-title {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+    border-bottom: 2px dashed rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.icon {
+    font-size: 1.6rem;
+}
+
+/* Upgrade Buttons & Paths */
+.upgrade-path {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.path-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+}
+
+.upgrade-btn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-main);
+    outline: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.upgrade-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    transform: translateX(-100%);
+}
+
+.upgrade-btn:hover:not(:disabled):not(.active) {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--accent-blue-glow);
+    box-shadow: 0 0 10px rgba(56, 125, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.upgrade-btn:hover:not(:disabled):not(.active)::after {
+    transform: translateX(100%);
+    transition: transform 0.6s ease;
+}
+
+.upgrade-btn:active:not(:disabled):not(.active) {
+    transform: scale(0.97);
+}
+
+.upgrade-btn.active {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.25), rgba(76, 175, 80, 0.1));
+    border-color: var(--accent-green);
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.25);
+    cursor: default;
+}
+
+.upgrade-btn.active .upgrade-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 4px var(--accent-green-glow));
+}
+
+.upgrade-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    border-color: transparent;
+}
+
+.btn-content {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.upgrade-icon {
+    font-size: 1.8rem;
+    transition: transform 0.3s ease;
+}
+
+.btn-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-name {
+    font-weight: 800;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.btn-desc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.reset-btn {
+    width: 100%;
+    background: rgba(244, 67, 54, 0.15);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: 800;
+    color: var(--accent-red-glow);
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    margin-top: auto;
+}
+
+.reset-btn:hover {
+    background: rgba(244, 67, 54, 0.25);
+    border-color: var(--accent-red-glow);
+    box-shadow: 0 0 12px rgba(244, 67, 54, 0.3);
+}
+
+/* Stats UI & Row Styling */
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 4px 0;
+}
+
+.stat-label {
+    color: var(--text-muted);
+}
+
+.stat-value {
+    font-family: var(--font-heading);
+    letter-spacing: 0.5px;
+}
+
+.highlight-text {
+    color: var(--accent-gold-glow);
+    text-shadow: 0 0 6px rgba(255, 193, 7, 0.2);
+    font-size: 1.3rem;
+}
+
+.divider {
+    border: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+    margin: 12px 0;
+}
+
+.subpanel-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+/* Small Control Buttons (Lights and Sound) */
+.lighting-controls, .audio-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.audio-controls {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.light-btn, .audio-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 8px 4px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.light-btn:hover, .audio-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+}
+
+.light-btn.active, .audio-btn.active {
+    background: linear-gradient(135deg, rgba(56, 125, 255, 0.25), rgba(56, 125, 255, 0.1));
+    border-color: var(--accent-blue-glow);
+    color: var(--text-main);
+    box-shadow: 0 0 8px rgba(56, 125, 255, 0.25);
+}
+
+/* Footer Guide */
+.app-footer {
+    grid-area: footer;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    align-self: end;
+    border-radius: 14px;
+    padding: 10px 32px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.guide-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.key {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--text-main);
+    font-family: monospace;
+    font-weight: bold;
+}
+
+/* Upgrade Announcement Splash */
+#announcement {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    z-index: 100;
+    pointer-events: none;
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    color: var(--accent-gold-glow);
+    text-shadow: 0 0 10px var(--accent-gold), 0 3px 0 #5c4308;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid var(--accent-gold);
+    box-shadow: 0 0 25px rgba(255, 193, 7, 0.5);
+    border-radius: 12px;
+    padding: 12px 28px;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#announcement.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Animations */
+@keyframes header-wiggle {
+    0% { transform: rotate(-1.5deg) translateY(0); }
+    100% { transform: rotate(1.5deg) translateY(-2px); }
+}
+
+/* Simple Custom Scrollbars for Side Panels */
+.side-panel::-webkit-scrollbar {
+    width: 6px;
+}
+.side-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+.side-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+.side-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile responsive styles */
+@media (max-width: 900px) {
+    #ui-overlay {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr auto;
+        grid-template-areas:
+            "header"
+            "left-panel"
+            "right-panel"
+            "footer";
+        overflow-y: auto;
+        height: auto;
+        pointer-events: auto;
+    }
+    .side-panel {
+        max-height: none;
+    }
+    .app-footer {
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        width: 100%;
+        margin-top: 12px;
+    }
+}

@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioVR — Labeled Neuroanatomy 3D Viewer</title>
+    <meta name="description" content="Interactive 3D clinical neuroanatomy atlas featuring 25+ brain structures for BioVR">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #06060c;
+            color: #e2e8f0;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Top Header Bar */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 10;
+            height: 80px;
+            background: linear-gradient(to bottom, rgba(6, 6, 12, 0.95), rgba(6, 6, 12, 0.6) 60%, transparent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            pointer-events: none;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #a78bfa, #ec4899);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .logo-icon svg {
+            color: #ffffff;
+        }
+
+        .logo-text h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text p {
+            font-size: 11px;
+            color: #8b5cf6;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: -2px;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: rgba(15, 23, 42, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 18px;
+            border-radius: 12px;
+            color: #94a3b8;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: rgba(167, 139, 250, 0.3);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(236, 72, 153, 0.15));
+            border-color: rgba(167, 139, 250, 0.5);
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.15);
+        }
+
+        /* Sidebar Control Center */
+        .sidebar {
+            position: fixed;
+            left: 24px;
+            top: 104px;
+            bottom: 24px;
+            width: 360px;
+            background: rgba(10, 10, 20, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 24px 24px 16px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sidebar-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: -0.3px;
+        }
+
+        .sidebar-header p {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 3px;
+        }
+
+        /* Search Section */
+        .search-container {
+            margin-top: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            color: #475569;
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px 16px 10px 40px;
+            color: #f1f5f9;
+            font-family: inherit;
+            font-size: 13px;
+            transition: all 0.25s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: rgba(167, 139, 250, 0.4);
+            background: rgba(15, 23, 42, 0.85);
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.05);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: #475569;
+            cursor: pointer;
+            display: none;
+            padding: 4px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .search-clear:hover {
+            color: #f1f5f9;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Category Filter Tabs */
+        .filter-tabs {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 4px;
+            margin-top: 14px;
+            background: rgba(15, 23, 42, 0.4);
+            padding: 3px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 0;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: #cbd5e1;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff;
+        }
+
+        /* Anatomical structures List */
+        .structures-list-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 12px 12px 12px 20px;
+        }
+
+        /* Scrollbar configuration for premium feel */
+        .structures-list-area::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .structures-list-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .structures-list-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+        }
+
+        .structures-list-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .structure-list-ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .list-item:hover {
+            background: rgba(255, 255, 255, 0.03);
+            transform: translateX(2px);
+        }
+
+        .list-item.selected {
+            background: linear-gradient(to right, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.03));
+            border-color: rgba(167, 139, 250, 0.15);
+        }
+
+        .structure-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 14px;
+            display: inline-block;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .structure-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #cbd5e1;
+            flex-grow: 1;
+        }
+
+        .list-item.selected .structure-name {
+            color: #ffffff;
+        }
+
+        .structure-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #475569;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 2px 6px;
+            border-radius: 5px;
+        }
+
+        /* Sliders / Transparency Section */
+        .controls-section {
+            padding: 20px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(10, 10, 20, 0.4);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 500;
+            color: #94a3b8;
+        }
+
+        .slider-val {
+            font-family: 'JetBrains Mono', monospace;
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        .input-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .input-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #a78bfa;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+            transition: transform 0.15s, background 0.15s;
+        }
+
+        .input-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: #ffffff;
+        }
+
+        /* Right Side Clinical Info Dashboard Panel */
+        .info-panel {
+            position: fixed;
+            right: 24px;
+            top: 104px;
+            bottom: 24px;
+            width: 400px;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-card {
+            background: rgba(10, 10, 20, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            padding: 24px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .panel-card.collapsed {
+            opacity: 0;
+            transform: translateX(30px) scale(0.95);
+            pointer-events: none;
+        }
+
+        /* Primary selection clinical details card */
+        #clinical-details-card {
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: calc(100vh - 350px);
+        }
+
+        .system-badge {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            background: rgba(167, 139, 250, 0.12);
+            color: #c084fc;
+            border-radius: 20px;
+            align-self: flex-start;
+            border: 1px solid rgba(167, 139, 250, 0.15);
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-divider {
+            height: 1px;
+            background: linear-gradient(to right, rgba(255,255,255,0.08), transparent);
+            margin: 16px 0;
+        }
+
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-label svg {
+            color: #a78bfa;
+        }
+
+        .info-content {
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+
+        .clinical-text {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #fda4af;
+            background: rgba(225, 29, 72, 0.04);
+            border: 1px solid rgba(225, 29, 72, 0.12);
+            padding: 12px 14px;
+            border-radius: 12px;
+        }
+
+        /* Secondary pathway tracing card */
+        .pathways-card {
+            background: rgba(10, 10, 20, 0.7);
+            padding: 20px;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .pathway-selector-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .pathway-btn {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 8px 4px;
+            border-radius: 8px;
+            color: #475569;
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .pathway-btn:hover {
+            border-color: rgba(255,255,255,0.1);
+            color: #94a3b8;
+        }
+
+        .pathway-btn.active {
+            color: #ffffff;
+        }
+
+        #pathway-btn-meso.active {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+        }
+
+        #pathway-btn-motor.active {
+            background: rgba(225, 29, 72, 0.15);
+            border-color: rgba(225, 29, 72, 0.4);
+            box-shadow: 0 0 10px rgba(225, 29, 72, 0.1);
+        }
+
+        #pathway-btn-limbic.active {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+        }
+
+        .pathway-badge-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+        }
+
+        .pathway-active-badge {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            padding: 2px 8px;
+            border-radius: 5px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Controls Hint */
+        .controls-hint {
+            position: fixed;
+            bottom: 24px;
+            left: 400px;
+            z-index: 10;
+            display: flex;
+            gap: 16px;
+            background: rgba(10, 10, 20, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 8px 16px;
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .hint-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hint-key {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed;
+            z-index: 100;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        /* Loading Screen */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #06060c;
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+
+        .loading-overlay.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 2px solid rgba(167, 139, 250, 0.1);
+            border-top: 2px solid #a78bfa;
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            box-shadow: 0 0 20px rgba(167, 139, 250, 0.05);
+            margin-bottom: 24px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .loading-subtext {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Upgraded Neuroanatomy Morphogenesis</div>
+        <div class="loading-subtext" id="loading-status">Initiating deep brain cellular matrix...</div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-area">
+            <div class="logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v12"/><path d="M8 10h8"/><path d="M8 14h8"/></svg>
+            </div>
+            <div class="logo-text">
+                <h1>BioVR</h1>
+                <p>Advanced Clinical Neuroatlas</p>
+            </div>
+        </div>
+
+        <div class="controls-row">
+            <button class="btn active" id="btn-rotate" onclick="toggleAutoRotate()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                Auto-Rotate
+            </button>
+            <button class="btn" id="btn-wireframe" onclick="toggleWireframe()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Wireframe
+            </button>
+            <button class="btn" id="btn-slice" onclick="toggleSagittalSlice()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                Sagittal Cut
+            </button>
+            <button class="btn" id="btn-explode" onclick="toggleExplode()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3zM6 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3z"/></svg>
+                Explode View
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Human Brain</h2>
+            <p>Select any neural structure to query clinical diagnostics</p>
+
+            <div class="search-container">
+                <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input class="search-input" id="structure-search" type="text" placeholder="Search structure, system, or pathway..." oninput="handleSearch(this.value)">
+                <button class="search-clear" id="search-clear-btn" onclick="clearSearch()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div class="filter-tabs">
+                <button class="tab-btn active" id="tab-all" onclick="filterCategory('all')">All</button>
+                <button class="tab-btn" id="tab-cortex" onclick="filterCategory('cortex')">Cortex</button>
+                <button class="tab-btn" id="tab-limbic" onclick="filterCategory('limbic')">Limbic</button>
+                <button class="tab-btn" id="tab-deep" onclick="filterCategory('diencephalon')">Deep</button>
+                <button class="tab-btn" id="tab-stem" onclick="filterCategory('stem')">Stem</button>
+            </div>
+
+            <!-- Premium Quick Presets Row -->
+            <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 6px;">
+                <span class="info-label" style="font-size: 10px; color: #c084fc; letter-spacing: 1px; display: flex; align-items: center; gap: 4px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2h0z"/><polyline points="2 17 12 22 22 17"/></svg>
+                    Interactive Clinical Presets
+                </span>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                    <button class="pathway-btn" id="preset-btn-limbic" onclick="applyPreset('limbic')" style="font-size: 8.5px; padding: 6px 2px; border-radius: 6px; background: rgba(16, 185, 129, 0.04); border-color: rgba(16, 185, 129, 0.12); color: #6ee7b7;">Limbic Focus</button>
+                    <button class="pathway-btn" id="preset-btn-dopamine" onclick="applyPreset('dopamine')" style="font-size: 8.5px; padding: 6px 2px; border-radius: 6px; background: rgba(245, 158, 11, 0.04); border-color: rgba(245, 158, 11, 0.12); color: #fcd34d;">Dopamine Study</button>
+                    <button class="pathway-btn" id="preset-btn-xray" onclick="applyPreset('xray')" style="font-size: 8.5px; padding: 6px 2px; border-radius: 6px; background: rgba(56, 189, 248, 0.04); border-color: rgba(56, 189, 248, 0.12); color: #7dd3fc;">X-Ray Cut</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="structures-list-area">
+            <ul class="structure-list-ul" id="structure-list-ul">
+                <!-- Populate dynamically via JS -->
+            </ul>
+        </div>
+
+        <div class="controls-section">
+            <div class="slider-group">
+                <div class="slider-label-row">
+                    <span>Neocortex Transparency</span>
+                    <span class="slider-val" id="transparency-val">0%</span>
+                </div>
+                <input class="input-slider" id="transparency-slider" type="range" min="0" max="100" value="0" oninput="adjustHemisphereTransparency(this.value)">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label-row">
+                    <span>Unselected structures Fade</span>
+                    <span class="slider-val" id="isolation-val">100%</span>
+                </div>
+                <input class="input-slider" id="isolation-slider" type="range" min="0" max="100" value="100" oninput="adjustIsolation(this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side Information Panels -->
+    <div class="info-panel">
+        <!-- Main Clinical Info Card -->
+        <div class="panel-card collapsed" id="clinical-details-card">
+            <span class="system-badge" id="card-system">Limbic System</span>
+            <div class="card-title" id="card-title">
+                <span class="structure-dot" id="card-title-dot"></span>
+                Structure Name
+            </div>
+            
+            <div class="info-section">
+                <span class="info-label">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2h0z"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Functional Role
+                </span>
+                <p class="info-content" id="card-func">Functional summary details.</p>
+            </div>
+
+            <div class="card-divider"></div>
+
+            <div class="info-section">
+                <span class="info-label" style="color: #fda4af;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Clinical Significance & Pathology
+                </span>
+                <div class="clinical-text" id="card-clinical">Clinical relevance and pathological significance.</div>
+            </div>
+        </div>
+
+        <!-- Neural Pathway Tracker Card -->
+        <div class="panel-card pathways-card">
+            <div class="pathway-badge-row">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Pathway Tracer Engine
+                <span class="pathway-active-badge" id="pathway-active-badge">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                    Active
+                </span>
+            </div>
+            <div class="pathway-selector-row">
+                <button class="pathway-btn" id="pathway-btn-meso" onclick="selectPathway('mesolimbic')">Mesolimbic</button>
+                <button class="pathway-btn" id="pathway-btn-motor" onclick="selectPathway('nigrostriatal')">Nigrostriatal</button>
+                <button class="pathway-btn" id="pathway-btn-limbic" onclick="selectPathway('limbic')">Limbic Papez</button>
+            </div>
+            <div class="clinical-text" id="card-pathway-text" style="color: #e0e7ff; background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05); display: none;">
+                Select a pathway above to visualize active neurotransmitter propagation curves in 3D.
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Hint -->
+    <div class="controls-hint">
+        <div class="hint-row"><span class="hint-key">LMB</span> Orbit</div>
+        <div class="hint-row"><span class="hint-key">RMB</span> Pan</div>
+        <div class="hint-row"><span class="hint-key">Scroll</span> Zoom</div>
+        <div class="hint-row"><span class="hint-key">Click</span> Select Structure</div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- Three.js module loading -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // ─── Neuroanatomy High-Yield Database ───────────────────────────
+        const neuroDb = {
+            'Cerebrum_Left': {
+                name: 'Left Cerebral Hemisphere',
+                system: 'Cerebral Cortex',
+                color: '#ec4899',
+                category: 'cortex',
+                detail: 'High-Fidelity',
+                func: 'Manages cognitive operations, reasoning, memory, voluntary motion, and language processing. Specifically controls motor and sensory pathways on the right side of the body.',
+                clinical: '<strong>Broca\'s & Wernicke\'s</strong>: Primarily localized in the left hemisphere. Damage leads to expressive or receptive aphasias (inability to speak fluently or understand speech, respectively).'
+            },
+            'Cerebrum_Right': {
+                name: 'Right Cerebral Hemisphere',
+                system: 'Cerebral Cortex',
+                color: '#ec4899',
+                category: 'cortex',
+                detail: 'High-Fidelity',
+                func: 'Dominates spatial reasoning, pattern recognition, music recognition, non-verbal cues, emotional perception, and lateral attention. Controls the left side of the body.',
+                clinical: '<strong>Hemispatial Neglect</strong>: Right parietal lobe injury results in patients completely ignoring the left half of their visual field, environment, and body.'
+            },
+            'Corpus_Callosum': {
+                name: 'Corpus Callosum',
+                system: 'Commissural Fibers',
+                color: '#f8fafc',
+                category: 'cortex',
+                detail: 'Bridge Fibers',
+                func: 'A colossal bridge of over 200 million myelinated axonal fibers that coordinates interhemispheric communication, sharing motor, sensory, and cognitive signals between hemispheres.',
+                clinical: '<strong>Split-Brain Syndrome</strong>: Severed therapeutically to cure extreme epilepsy. Results in cognitive disconnections (e.g., patient can select an object with left hand but is unable to verbally identify it).'
+            },
+            'Thalamus_Left': {
+                name: 'Left Thalamus',
+                system: 'Diencephalon',
+                color: '#7c3aed',
+                category: 'diencephalon',
+                detail: 'Sensory Relay',
+                func: 'Acts as the primary brain sensory gating relay station. Pre-processes and routes visual, auditory, and somatosensory inputs upwards to specific cortical zones.',
+                clinical: '<strong>Sensory Sparing</strong>: All sensory signals funnel through the Thalamus EXCEPT for olfactory (smell) inputs, which connect directly to the evolutionarily ancient limbic system.'
+            },
+            'Thalamus_Right': {
+                name: 'Right Thalamus',
+                system: 'Diencephalon',
+                color: '#7c3aed',
+                category: 'diencephalon',
+                detail: 'Sensory Relay',
+                func: 'Coordinates sensory distribution and gating for contralateral stimulus streams. Deeply tied to cortical arousal, focus, and conscious attention.',
+                clinical: '<strong>Thalamic Pain Syndrome</strong>: Vascular lesions here cause severe, centralized chronic burning pain, resistant to standard analgesic treatments.'
+            },
+            'Caudate_Left': {
+                name: 'Left Caudate Nucleus',
+                system: 'Basal Ganglia',
+                color: '#fb7185',
+                category: 'diencephalon',
+                detail: 'C-Arch Head',
+                func: 'A C-shaped subcortical motor nucleus involved in motor planning, execution, goal-directed behavior, and learning. Forms the striatum together with the putamen.',
+                clinical: '<strong>Huntington\'s Disease</strong>: Severe atrophy of the caudate nucleus head leads to a loss of GABAergic neurons, resulting in chorea (involuntary writhing) and progressive dementia.'
+            },
+            'Caudate_Right': {
+                name: 'Right Caudate Nucleus',
+                system: 'Basal Ganglia',
+                color: '#fb7185',
+                category: 'diencephalon',
+                detail: 'C-Arch Head',
+                func: 'Integrates spatial sensory information with motor outputs to coordinate fluid movement. Deeply involved in the cognitive feedback loop of reward and habit learning.',
+                clinical: '<strong>OCD & Habits</strong>: Hyperactivity in the right caudate-orbitofrontal loop is linked to Obsessive-Compulsive Disorder, driving compulsive behavioral rituals.'
+            },
+            'Putamen_Left': {
+                name: 'Left Putamen',
+                system: 'Basal Ganglia',
+                color: '#e11d48',
+                category: 'diencephalon',
+                detail: 'Striatum Outer',
+                func: 'A round structure forming the outer portion of the lentiform nucleus. Regulates motor control, muscle tone, and facilitates reinforcement learning through dopamine pathways.',
+                clinical: '<strong>Tourette Syndrome</strong>: Dysregulation of dopamine receptors within the putamen is implicated in the generation of physical and vocal tics.'
+            },
+            'Putamen_Right': {
+                name: 'Right Putamen',
+                system: 'Basal Ganglia',
+                color: '#e11d48',
+                category: 'diencephalon',
+                detail: 'Striatum Outer',
+                func: 'Supports motor preparation, coordination of automatic movements, and habituation. Interfaces directly with the motor cortex to suppress unwanted movement patterns.',
+                clinical: '<strong>Restless Legs Syndrome</strong>: Altered iron metabolism and dopaminergic dysfunction in the putamen are strongly linked to involuntary leg movements.'
+            },
+            'Globus_Pallidus_Left': {
+                name: 'Left Globus Pallidus',
+                system: 'Basal Ganglia',
+                color: '#fda4af',
+                category: 'diencephalon',
+                detail: 'Basal Output',
+                func: 'Acts as the primary output hub of the basal ganglia. Its internal segment (GPi) provides tonic GABAergic inhibition to the thalamus, filtering out noise in motor signals.',
+                clinical: '<strong>Parkinson\'s Rigidity</strong>: Overactivity of GPi due to loss of substantia nigra dopamine leads to excessive thalamic inhibition, causing rigidity and bradykinesia.'
+            },
+            'Globus_Pallidus_Right': {
+                name: 'Right Globus Pallidus',
+                system: 'Basal Ganglia',
+                color: '#fda4af',
+                category: 'diencephalon',
+                detail: 'Basal Output',
+                func: 'Regulates voluntary movement on the contralateral side of the body. Contains internal (inhibitory) and external (regulatory) subdivisions to modulate motor thalamus output.',
+                clinical: '<strong>Carbon Monoxide Poisoning</strong>: The globus pallidus is uniquely sensitive to hypoxia and CO poisoning, resulting in bilateral necrotic lesions and secondary parkinsonism.'
+            },
+            'Hypothalamus': {
+                name: 'Hypothalamus',
+                system: 'Diencephalon',
+                color: '#ea580c',
+                category: 'diencephalon',
+                detail: 'Homeostasis',
+                func: 'Orchestrates systemic homeostasis. Regulates the autonomic nervous system, core body temperature, thirst, hunger, biological sleep clocks, and emotional states.',
+                clinical: '<strong>The 4 Fs</strong>: High-yield psychology memory aid for hypothalamic drivers: Fighting, Fleeing, Feeding, and Mating. Directly controls the endocrine system via the pituitary stalk.'
+            },
+            'Pituitary_Gland': {
+                name: 'Pituitary Gland',
+                system: 'Endocrine System',
+                color: '#06b6d4',
+                category: 'diencephalon',
+                detail: 'Master Gland',
+                func: 'Known as the "Master Gland". Secretes neurohormones (ACTH, TSH, GH, Oxytocin, Vasopressin) regulating metabolism, stress response, fluid balance, growth, and reproduction.',
+                clinical: '<strong>HPA Stress Axis</strong>: Central node in the Hypothalamic-Pituitary-Adrenal axis. Cortisol signaling pathways originate here during prolonged psychological stressors.'
+            },
+            'Pineal_Gland': {
+                name: 'Pineal Gland',
+                system: 'Epithalamus',
+                color: '#eab308',
+                category: 'diencephalon',
+                detail: 'Circadian Hub',
+                func: 'Translates circadian light cues from the retina (relayed via suprachiasmatic nucleus) into systemic endocrine signals by synthesizing melatonin.',
+                clinical: '<strong>Circadian Control</strong>: Pineal activity peaks in darkness, facilitating sleep cycle synchronization. Melatonin supplements mimic this pineal endocrine surge.'
+            },
+            'Hippocampus_Left': {
+                name: 'Left Hippocampus',
+                system: 'Limbic System',
+                color: '#10b981',
+                category: 'limbic',
+                detail: 'Memory Core',
+                func: 'Key engine for declarative memory consolidation (converting experiences into long-term memories) and spatial mapping.',
+                clinical: '<strong>Anterograde Amnesia</strong>: Damage preserves old childhood memories but completely prevents learning new facts, names, or events.'
+            },
+            'Hippocampus_Right': {
+                name: 'Right Hippocampus',
+                system: 'Limbic System',
+                color: '#10b981',
+                category: 'limbic',
+                detail: 'Spatial Map',
+                func: 'Mainly maps spatial coordinate environments and navigation memories. Dynamically adapts structural volume based on spatial demands.',
+                clinical: '<strong>London Taxi Drivers</strong>: Classic MRI study showed taxi drivers navigating complex streets possessed significantly enlarged posterior hippocampi.'
+            },
+            'Amygdala_Left': {
+                name: 'Left Amygdala',
+                system: 'Limbic System',
+                color: '#34d399',
+                category: 'limbic',
+                detail: 'Fear Monitor',
+                func: 'Monitors external threats, processes fear, aggression, anger, and binds powerful emotional valence (salience) to memories.',
+                clinical: '<strong>Fear Conditioning</strong>: Essential for classical fear learning. Bilateral calcification prevents patients from recognizing fearful faces or experiencing fear.'
+            },
+            'Amygdala_Right': {
+                name: 'Right Amygdala',
+                system: 'Limbic System',
+                color: '#34d399',
+                category: 'limbic',
+                detail: 'Threat Alert',
+                func: 'Specialized for rapid emotional screening, processing facial signals, and trigger-warning the autonomic nervous system to prepare for emergency action.',
+                clinical: '<strong>Klüver-Bucy Syndrome</strong>: Bilateral amygdala destruction results in extreme docility, hyper-sexuality, and loss of fear responses.'
+            },
+            'Nucleus_Accumbens_Left': {
+                name: 'Left Nucleus Accumbens',
+                system: 'Limbic System',
+                color: '#06d6a0',
+                category: 'limbic',
+                detail: 'Pleasure Hub',
+                func: 'Interfaces the limbic system with motor action. Acts as the brain\'s primary "pleasure center", encoding reward prediction, motivation, and positive reinforcement.',
+                clinical: '<strong>Addiction Pathways</strong>: All drugs of abuse (cocaine, nicotine, alcohol) trigger a massive dopamine release in the nucleus accumbens, reinforcing addictive behaviors.'
+            },
+            'Nucleus_Accumbens_Right': {
+                name: 'Right Nucleus Accumbens',
+                system: 'Limbic System',
+                color: '#06d6a0',
+                category: 'limbic',
+                detail: 'Motivation Hub',
+                func: 'Processes incentive salience and motivational drive. Plays a critical role in the placebo effect, anticipation of reward, and impulsive decision-making.',
+                clinical: '<strong>Anhedonia</strong>: Chronic stress or depression desensitizes accumbens medium spiny neurons, causing a profound inability to feel pleasure from normally rewarding activities.'
+            },
+            'Cerebellum': {
+                name: 'Cerebellum',
+                system: 'Metencephalon',
+                color: '#be123c',
+                category: 'stem',
+                detail: 'Motor Control',
+                func: 'Coordinates complex motor balance, posture, fine voluntary muscle synchronization, motor coordination, and stores procedural/muscle memory (e.g. riding a bike).',
+                clinical: '<strong>Cerebellar Ataxia</strong>: Damage produces clumsy, uncoordinated movements, slurred speech (dysarthria), and a wide-based gait resembling severe alcohol intoxication.'
+            },
+            'Pons': {
+                name: 'Pons',
+                system: 'Brainstem',
+                color: '#94a3b8',
+                category: 'stem',
+                detail: 'Fibers Bridge',
+                func: 'Serves as the vital bridge connecting the cortex to the cerebellum. Regulates sleep architecture (houses the dream/REM generators), swallowing, and bladder control.',
+                clinical: '<strong>Locked-In Syndrome</strong>: Ischemic strokes targeting ventral pons block descending motor axons, leaving patients paralyzed but fully conscious.'
+            },
+            'VTA': {
+                name: 'Ventral Tegmental Area (VTA)',
+                system: 'Midbrain / Dopaminergic',
+                color: '#f59e0b',
+                category: 'stem',
+                detail: 'Dopamine Core',
+                func: 'The origin of the mesolimbic and mesocortical dopamine pathways. Houses dopaminergic neurons that fire in response to rewards, unexpected pleasant surprises, and novel stimuli.',
+                clinical: '<strong>Schizophrenia</strong>: Hyperactivity of VTA dopaminergic projections to the limbic system (mesolimbic) is thought to cause positive symptoms (hallucinations, delusions).'
+            },
+            'Substantia_Nigra_Left': {
+                name: 'Left Substantia Nigra',
+                system: 'Midbrain / Basal Ganglia',
+                color: '#475569',
+                category: 'diencephalon',
+                detail: 'Motor Dopamine',
+                func: 'Part of the midbrain but functionally tied to the basal ganglia. Houses neuromelanin-pigmented dopaminergic neurons that project to the striatum (nigrostriatal pathway) to facilitate movement.',
+                clinical: '<strong>Parkinson\'s Disease</strong>: Selective loss of >80% of dopaminergic neurons in the substantia nigra pars compacta causes classic resting tremors, rigidity, and postural instability.'
+            },
+            'Substantia_Nigra_Right': {
+                name: 'Right Substantia Nigra',
+                system: 'Midbrain / Basal Ganglia',
+                color: '#475569',
+                category: 'diencephalon',
+                detail: 'Motor Dopamine',
+                func: 'Modulates motor learning, reinforcement of motor sequences, and eye movements. Coordinates fine motor dynamics and motor initiation for the left side of the body.',
+                clinical: '<strong>MPTP Neurotoxin</strong>: Accidental ingestion of the synthetic chemical MPTP selectively destroys substantia nigra neurons, causing instant, permanent severe parkinsonism.'
+            },
+            'Medulla_Oblongata': {
+                name: 'Medulla Oblongata',
+                system: 'Brainstem',
+                color: '#94a3b8',
+                category: 'stem',
+                detail: 'Life Reflexes',
+                func: 'Directs critical life-support reflexes, including cardiorespiratory pace, vascular dilation, digestion, vomiting, coughing, and swallowing.',
+                clinical: '<strong>Fatal Lesions</strong>: Because the Medulla governs involuntary cardiopulmonary breathing pacemakers, even tiny lesions here are immediately fatal.'
+            },
+            'Spinal_Cord': {
+                name: 'Spinal Cord (CNS Axis)',
+                system: 'Central Nervous System',
+                color: '#64748b',
+                category: 'stem',
+                detail: 'Axonal Tracts',
+                func: 'Carries ascending somatosensory reports from peripheral dermatomes up to the brain, and routes descending motor directives down to skeletal muscle.',
+                clinical: '<strong>Paraplegia & Quadriplegia</strong>: Complete transections block communication below the injury level, leading to regional paralysis and anesthesia.'
+            },
+            'Midbrain': {
+                name: 'Midbrain (Mesencephalon)',
+                system: 'Brainstem',
+                color: '#94a3b8',
+                category: 'stem',
+                detail: 'Stem Core',
+                func: 'Serves as the topmost region of the brainstem, relaying sensory and motor signals. Houses visual and auditory reflex centers (superior/inferior colliculi) and cerebral peduncles.',
+                clinical: '<strong>Weber\'s Syndrome</strong>: An infarction of the midbrain causing unilateral Oculomotor (CN III) nerve palsy and contralateral hemiplegia.'
+            },
+            'Interthalamic_Adhesion': {
+                name: 'Interthalamic Adhesion',
+                system: 'Diencephalon',
+                color: '#7c3aed',
+                category: 'diencephalon',
+                detail: 'Thalamic Bridge',
+                func: 'A flattened band of gray matter that bridges the third ventricle, connecting the medial surfaces of the two thalamic lobes.',
+                clinical: '<strong>Anatomical Variant</strong>: Notably absent in approximately 20-30% of normal human brains, with no documented cognitive or motor functional deficits.'
+            },
+            'Infundibulum_Stalk': {
+                name: 'Infundibular Stalk',
+                system: 'Diencephalon',
+                color: '#ea580c',
+                category: 'diencephalon',
+                detail: 'Endocrine Bridge',
+                func: 'A funnel-shaped neck connecting the hypothalamus to the pituitary gland, acting as a crucial transport route for hypophyseal neurohormones and axons.',
+                clinical: '<strong>Stalk Interruption Syndrome</strong>: Compression or transection leads to pituitary hormone deficiency, resulting in severe endocrine imbalances.'
+            },
+            'Pineal_Stalks': {
+                name: 'Pineal Stalks',
+                system: 'Epithalamus',
+                color: '#eab308',
+                category: 'diencephalon',
+                detail: 'Habenular Bridge',
+                func: 'Bilateral pretectal/habenular anchoring fibers that connect the pineal gland to the epithalamus on the posterior wall of the third ventricle.',
+                clinical: '<strong>Radiological Landmark</strong>: Stalk and gland calcification is extremely common in adults, serving as a reliable midline landmark on CT/MRI head scans.'
+            },
+            'Fornix': {
+                name: 'Fornix (C-Arch Tract)',
+                system: 'Commissural Fibers',
+                color: '#f8fafc',
+                category: 'limbic',
+                detail: 'Limbic Bridge',
+                func: 'A beautiful double-stranded C-shaped white matter tract that acts as the primary projection pathway out of the hippocampus, crucial for memory encoding.',
+                clinical: '<strong>Korsakoff\'s Amnesia</strong>: Damage to the fornix and its target mammillary bodies (often due to thiamine deficiency) leads to severe confabulating amnesia.'
+            },
+            'Spinal_Nerve_Rootlets': {
+                name: 'Spinal Nerve Rootlets',
+                system: 'Central Nervous System',
+                color: '#64748b',
+                category: 'stem',
+                detail: 'PNS Branch',
+                func: 'Thin, bilateral branching rootlets exiting the spinal cord segments, forming the posterior (sensory) and anterior (motor) roots of peripheral spinal nerves.',
+                clinical: '<strong>Radiculopathy</strong>: Herniated intervertebral discs compressing these nerve rootlets cause dermatomal sensory pain, numbness, and motor weakness.'
+            }
+        };
+
+        // ─── State Variables ───────────────────────────────────────────
+        let autoRotate = true;
+        let wireframeMode = false;
+        let explodeMode = false;
+        let sagittalCutMode = false;
+        let activeCategory = 'all';
+        let selectedStructureId = null;
+        let hemisphereTransparency = 0; // percentage
+        let isolationLevel = 1.0; // 0.0 (full isolation) to 1.0 (no isolation)
+        
+        let structures = {};
+        let originalPositions = {};
+        let explodeAmount = 0;
+        let targetExplode = 0;
+        
+        let hoveredObject = null;
+        const tempColor = new THREE.Color();
+
+        // ─── Neural Pathways System ──────────────────────────────────
+        let activePathwayMeshes = [];
+        let pathwayPulses = [];
+
+        const pathwaysDb = {
+            'mesolimbic': {
+                name: 'Mesolimbic Dopamine Pathway',
+                description: 'The brain\'s primary reward, reinforcement, and incentive motivation circuit.',
+                color: '#f59e0b',
+                nodes: ['VTA', 'Nucleus_Accumbens_Left', 'Amygdala_Left', 'Hippocampus_Left', 'Cerebrum_Left']
+            },
+            'nigrostriatal': {
+                name: 'Nigrostriatal Motor Pathway',
+                description: 'Governs motor planning, habit learning, and initiation of voluntary movement.',
+                color: '#e11d48',
+                nodes: ['Substantia_Nigra_Left', 'Caudate_Left', 'Putamen_Left']
+            },
+            'limbic': {
+                name: 'Limbic Papez Circuit',
+                description: 'Underlies emotional experience, expression, and memory consolidation.',
+                color: '#10b981',
+                nodes: ['Hippocampus_Left', 'Corpus_Callosum', 'Thalamus_Left', 'Hypothalamus']
+            }
+        };
+
+        // ─── Scene & Renderer Setup ──────────────────────────────────
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x06060c);
+        scene.fog = new THREE.FogExp2(0x06060c, 0.08);
+
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(3.4, 1.8, 3.4);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.15;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.localClippingEnabled = true; // Essential for Sagittal Slicing!
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Orbit Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.8;
+        controls.target.set(0, -0.2, 0);
+        controls.minDistance = 1.5;
+        controls.maxDistance = 8;
+        controls.maxPolarAngle = Math.PI * 0.85;
+
+        // ─── Lighting Setup ───────────────────────────────────────────
+        const ambientLight = new THREE.AmbientLight(0x303048, 0.35);
+        scene.add(ambientLight);
+
+        // Key light
+        const keyLight = new THREE.SpotLight(0xffe8dc, 70);
+        keyLight.position.set(3, 4, 3);
+        keyLight.angle = Math.PI / 4.5;
+        keyLight.penumbra = 0.55;
+        keyLight.decay = 2;
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.width = 1024;
+        keyLight.shadow.mapSize.height = 1024;
+        scene.add(keyLight);
+
+        // Fill Light
+        const fillLight = new THREE.PointLight(0x8eb0ff, 15);
+        fillLight.position.set(-3, 1, -2);
+        scene.add(fillLight);
+
+        // Rim Light
+        const rimLight = new THREE.SpotLight(0xff9e5b, 50);
+        rimLight.position.set(-2, 2, -4);
+        rimLight.angle = Math.PI / 4;
+        rimLight.penumbra = 0.8;
+        scene.add(rimLight);
+
+        // Bounce Light from floor
+        const bounceLight = new THREE.PointLight(0x4f46e5, 6);
+        bounceLight.position.set(0, -2.5, 0);
+        scene.add(bounceLight);
+
+        // ─── Ground Stage ─────────────────────────────────────────────
+        const groundGeo = new THREE.PlaneGeometry(20, 20);
+        const groundMat = new THREE.MeshStandardMaterial({
+            color: 0x07070f,
+            roughness: 0.2,
+            metalness: 0.4
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        const gridHelper = new THREE.GridHelper(10, 40, 0x1e1b4b, 0x0f0e26);
+        gridHelper.position.y = -1.99;
+        scene.add(gridHelper);
+
+        // ─── Sagittal Clipping Planes ────────────────────────────────
+        // Slice plane facing left (cuts left hemisphere, X is clipped if X < 0)
+        const sagittalClipLeft = new THREE.Plane(new THREE.Vector3(1, 0, 0), 5.0);
+        const sagittalClipRight = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 5.0);
+
+        // ─── Material Factory ────────────────────────────────────────
+        function createAnatomicalMaterial(colorHex, isHemisphere = false) {
+            const color = new THREE.Color(colorHex);
+            if (isHemisphere) {
+                // Hemispheres start fully opaque (0 transmission/thickness, transparent: false) on load
+                // to completely bypass expensive WebGL refraction passes and deliver 60 FPS.
+                return new THREE.MeshPhysicalMaterial({
+                    color: color,
+                    roughness: 0.22,
+                    metalness: 0.05,
+                    transmission: 0.0,
+                    thickness: 0.0,
+                    ior: 1.15,
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.08,
+                    sheen: 0.3,
+                    sheenColor: new THREE.Color(colorHex).addScalar(0.15),
+                    side: THREE.DoubleSide,
+                    transparent: false,
+                    opacity: 1.0
+                });
+            } else {
+                // Subcortical structures are solid biological bodies and NEVER need transmission or thickness passes.
+                return new THREE.MeshPhysicalMaterial({
+                    color: color,
+                    roughness: 0.25,
+                    metalness: 0.0,
+                    clearcoat: 0.3,
+                    clearcoatRoughness: 0.25,
+                    sheen: 0.25,
+                    sheenColor: new THREE.Color(colorHex).addScalar(0.08),
+                    transmission: 0.0,
+                    thickness: 0.0,
+                    ior: 1.35,
+                    side: THREE.FrontSide,
+                    transparent: false,
+                    opacity: 1.0
+                });
+            }
+        }
+
+        function updateLoadingStatus(msg) {
+            document.getElementById('loading-status').textContent = msg;
+        }
+
+        // ─── Assembly: GLTF base64 Asset Loader ──────────────────────
+
+        // {{INJECT_BRAIN_GLB_HERE}}
+
+        function base64ToArrayBuffer(base64Url) {
+            const base64 = base64Url.split(',')[1];
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        async function assembleBrainModel() {
+            updateLoadingStatus('Fabricating cerebral cortex lobes...');
+            await new Promise(r => setTimeout(r, 80));
+
+            const parentGroup = new THREE.Group();
+            parentGroup.name = 'Human_Brain';
+
+            if (typeof BRAIN_GLB_BASE64 === 'undefined') {
+                console.error("BRAIN_GLB_BASE64 is not defined! Please run the asset build script.");
+                updateLoadingStatus("Error: Base64 asset missing. Run build_assets.py!");
+                return;
+            }
+
+            const arrayBuffer = base64ToArrayBuffer(BRAIN_GLB_BASE64);
+            const loader = new GLTFLoader();
+
+            await new Promise((resolve, reject) => {
+                loader.parse(arrayBuffer, '', (gltf) => {
+                    const loadedModel = gltf.scene;
+                    
+                    // Traverse and register meshes
+                    loadedModel.traverse((child) => {
+                        if (child.isMesh) {
+                            const id = child.name;
+                            if (neuroDb[id]) {
+                                updateLoadingStatus(`Synthesizing structure: ${neuroDb[id].name}...`);
+                                
+                                const isHemi = id.startsWith('Cerebrum');
+                                const mat = createAnatomicalMaterial(neuroDb[id].color, isHemi);
+                                
+                                const isMidline = !id.endsWith('_Left') && !id.endsWith('_Right');
+                                if (id === 'Cerebrum_Left' || isMidline) {
+                                    mat.clippingPlanes = [sagittalClipLeft];
+                                }
+                                
+                                child.material = mat;
+                                child.castShadow = true;
+                                child.receiveShadow = true;
+                                
+                                structures[id] = child;
+                                originalPositions[id] = child.position.clone();
+                            } else {
+                                console.warn(`Object ${child.name} was not found in neuroDb!`);
+                            }
+                        }
+                    });
+
+                    // Add everything to parentGroup
+                    const meshIds = Object.keys(structures);
+                    meshIds.forEach(id => {
+                        const mesh = structures[id];
+                        parentGroup.add(mesh);
+                    });
+
+                    parentGroup.position.set(0, 0.1, 0);
+                    scene.add(parentGroup);
+                    resolve();
+                }, (error) => {
+                    console.error("Error parsing GLTF from Base64:", error);
+                    reject(error);
+                });
+            });
+
+            // Populate Sidebar
+            populateSidebarList();
+
+            // Dismiss Loading Screen
+            updateLoadingStatus('Morphogenesis Completed!');
+            await new Promise(r => setTimeout(r, 300));
+            document.getElementById('loading').classList.add('fade-out');
+            setTimeout(() => document.getElementById('loading').style.display = 'none', 800);
+        }
+
+        // ─── Sidebar Population & Filtering ──────────────────────────
+        function populateSidebarList() {
+            const ul = document.getElementById('structure-list-ul');
+            ul.innerHTML = '';
+
+            for (const [id, data] of Object.entries(neuroDb)) {
+                const li = document.createElement('li');
+                li.id = `list-item-${id}`;
+                li.className = 'list-item';
+                li.dataset.category = data.category;
+                li.onclick = () => selectStructure(id);
+                
+                // Hover events
+                li.onmouseenter = () => highlightStructureOnHover(id);
+                li.onmouseleave = () => resetHoverHighlight();
+
+                li.innerHTML = `
+                    <span class="structure-dot" style="color: ${data.color}; background: ${data.color}"></span>
+                    <span class="structure-name">${data.name}</span>
+                    <span class="structure-detail">${data.detail}</span>
+                `;
+                ul.appendChild(li);
+            }
+        }
+
+        window.filterCategory = function(cat) {
+            activeCategory = cat;
+            
+            const tabs = ['all', 'cortex', 'limbic', 'diencephalon', 'stem'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-${t === 'diencephalon' ? 'deep' : t}`).classList.toggle('active', t === cat);
+            });
+
+            const items = document.querySelectorAll('.list-item');
+            items.forEach(item => {
+                if (cat === 'all' || item.dataset.category === cat) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            updateStructureOpacities();
+        };
+
+        // ─── Centralized Interactive Transparency System ─────────────────
+        
+        window.adjustHemisphereTransparency = function(val) {
+            hemisphereTransparency = parseInt(val);
+            document.getElementById('transparency-val').textContent = `${val}%`;
+            updateStructureOpacities();
+        };
+
+        window.adjustIsolation = function(val) {
+            isolationLevel = parseFloat(val) / 100;
+            document.getElementById('isolation-val').textContent = `${val}%`;
+            updateStructureOpacities();
+        };
+
+        function updateStructureOpacities() {
+            const searchInput = document.getElementById('structure-search');
+            const searchActive = searchInput && searchInput.value.trim().length > 0;
+            const query = searchActive ? searchInput.value.toLowerCase().trim() : '';
+
+            for (const [id, mesh] of Object.entries(structures)) {
+                if (!mesh) continue;
+
+                const isSelected = (id === selectedStructureId);
+                const isHemisphere = id.startsWith('Cerebrum');
+                
+                let baseOpacity = 1.0;
+                
+                if (isHemisphere) {
+                    const transFactor = hemisphereTransparency / 100;
+                    baseOpacity = 1.0 - transFactor * 0.8;
+                    
+                    // Dynamic Transmission Optimization:
+                    // If transparency is 0, completely disable transmission, thickness and transparency flags
+                    // to instruct Three.js to completely skip expensive refractive buffer render passes.
+                    if (hemisphereTransparency === 0) {
+                        mesh.material.transmission = 0.0;
+                        mesh.material.thickness = 0.0;
+                        mesh.material.roughness = 0.22;
+                        mesh.material.transparent = false;
+                    } else {
+                        mesh.material.transmission = 0.45 + transFactor * 0.45;
+                        mesh.material.thickness = 0.8 * (1.0 - transFactor * 0.5);
+                        mesh.material.roughness = 0.12;
+                        mesh.material.transparent = true;
+                    }
+                } else {
+                    // Opaque subcortical structures never use transmission
+                    mesh.material.transmission = 0.0;
+                    mesh.material.thickness = 0.0;
+                }
+
+                const inCategory = (activeCategory === 'all' || neuroDb[id].category === activeCategory);
+
+                if (searchActive) {
+                    const db = neuroDb[id];
+                    const matchesSearch = db.name.toLowerCase().includes(query) || 
+                                          db.system.toLowerCase().includes(query) || 
+                                          db.func.toLowerCase().includes(query);
+
+                    if (matchesSearch && inCategory) {
+                        mesh.visible = true;
+                        mesh.material.opacity = isSelected ? 1.0 : baseOpacity;
+                        mesh.material.transparent = (mesh.material.opacity < 1.0 || (isHemisphere && hemisphereTransparency > 0));
+                    } else {
+                        mesh.visible = false;
+                        mesh.material.opacity = 0.0;
+                        mesh.material.transparent = true;
+                    }
+                } else {
+                    if (selectedStructureId !== null) {
+                        if (isSelected) {
+                            mesh.material.opacity = 1.0;
+                            mesh.material.transparent = false;
+                            mesh.visible = true;
+                        } else {
+                            const finalOpacity = baseOpacity * isolationLevel;
+                            mesh.material.opacity = finalOpacity;
+                            mesh.material.transparent = (finalOpacity < 1.0 || (isHemisphere && hemisphereTransparency > 0));
+                            mesh.visible = (finalOpacity > 0.01) && inCategory;
+                        }
+                    } else {
+                        mesh.material.opacity = baseOpacity;
+                        mesh.material.transparent = (baseOpacity < 1.0 || (isHemisphere && hemisphereTransparency > 0));
+                        mesh.visible = inCategory;
+                    }
+                }
+
+                mesh.material.needsUpdate = true;
+            }
+        }
+
+        // ─── Pathway Tracer Engine ─────────────────────────────────────
+        function getMeshCenter(id) {
+            const mesh = structures[id];
+            if (!mesh) return new THREE.Vector3(0, 0, 0);
+            const center = new THREE.Vector3();
+            mesh.geometry.computeBoundingBox();
+            mesh.geometry.boundingBox.getCenter(center);
+            mesh.localToWorld(center);
+            return center;
+        }
+
+        function clearPathwayCurves() {
+            activePathwayMeshes.forEach(mesh => {
+                scene.remove(mesh);
+                if (mesh.geometry) mesh.geometry.dispose();
+                if (mesh.material) mesh.material.dispose();
+            });
+            activePathwayMeshes = [];
+            pathwayPulses = [];
+        }
+
+        window.renderPathwayCurves = function(pathwayId) {
+            clearPathwayCurves();
+            
+            const db = pathwaysDb[pathwayId];
+            if (!db) return;
+            
+            const instances = [
+                { suffix: '_Left', sign: -1 },
+                { suffix: '_Right', sign: 1 }
+            ];
+            
+            instances.forEach(inst => {
+                const points = [];
+                db.nodes.forEach(nodeBase => {
+                    let id = nodeBase;
+                    if (structures[nodeBase + inst.suffix]) {
+                        id = nodeBase + inst.suffix;
+                    } else if (structures[nodeBase]) {
+                        id = nodeBase;
+                    }
+                    
+                    if (structures[id]) {
+                        points.push(getMeshCenter(id));
+                    }
+                });
+                
+                if (points.length < 2) return;
+                
+                const curve = new THREE.CatmullRomCurve3(points);
+                const curvePoints = curve.getPoints(50);
+                
+                const geometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+                const material = new THREE.LineBasicMaterial({
+                    color: new THREE.Color(db.color),
+                    transparent: true,
+                    opacity: 0.75,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                const line = new THREE.Line(geometry, material);
+                scene.add(line);
+                activePathwayMeshes.push(line);
+                
+                const pulseGeo = new THREE.SphereGeometry(0.018, 16, 16);
+                const pulseMat = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(db.color),
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending
+                });
+                
+                for (let j = 0; j < 3; j++) {
+                    const pulse = new THREE.Mesh(pulseGeo, pulseMat);
+                    scene.add(pulse);
+                    activePathwayMeshes.push(pulse);
+                    
+                    pathwayPulses.push({
+                        mesh: pulse,
+                        curve: curve,
+                        progress: j * 0.33,
+                        speed: 0.004 + Math.random() * 0.002
+                    });
+                }
+            });
+        };
+
+        // ─── Search Functionality ─────────────────────────────────────
+        window.handleSearch = function(query) {
+            const clearBtn = document.getElementById('search-clear-btn');
+            if (query.trim().length > 0) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+
+            const lowerQuery = query.toLowerCase().trim();
+            const items = document.querySelectorAll('.list-item');
+
+            items.forEach(item => {
+                const id = item.id.replace('list-item-', '');
+                const db = neuroDb[id];
+                
+                const matches = db.name.toLowerCase().includes(lowerQuery) || 
+                                db.system.toLowerCase().includes(lowerQuery) || 
+                                db.func.toLowerCase().includes(lowerQuery);
+
+                const inCategory = (activeCategory === 'all' || item.dataset.category === activeCategory);
+
+                if (matches && inCategory) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            if (lowerQuery.length > 0) {
+                for (const [id, mesh] of Object.entries(structures)) {
+                    const db = neuroDb[id];
+                    const matches = db.name.toLowerCase().includes(lowerQuery) || 
+                                    db.system.toLowerCase().includes(lowerQuery) || 
+                                    db.func.toLowerCase().includes(lowerQuery);
+
+                    if (matches) {
+                        mesh.material.emissive.setHex(0x120a2e);
+                        mesh.material.emissiveIntensity = 0.35;
+                    } else {
+                        mesh.material.emissive.setHex(0x000000);
+                        mesh.material.emissiveIntensity = 0.0;
+                    }
+                }
+            } else {
+                if (!selectedStructureId) {
+                    resetHoverHighlight();
+                } else {
+                    selectStructure(selectedStructureId);
+                }
+            }
+
+            updateStructureOpacities();
+        };
+
+        window.clearSearch = function() {
+            const input = document.getElementById('structure-search');
+            input.value = '';
+            handleSearch('');
+        };
+
+        // ─── Click/Interact Selection Handler ─────────────────────────
+        function selectStructure(id) {
+            selectedStructureId = id;
+            const db = neuroDb[id];
+
+            const items = document.querySelectorAll('.list-item');
+            items.forEach(i => i.classList.remove('selected'));
+            
+            const selectedItem = document.getElementById(`list-item-${id}`);
+            if (selectedItem) selectedItem.classList.add('selected');
+
+            for (const [mid, mesh] of Object.entries(structures)) {
+                if (mid === id) {
+                    mesh.material.emissive.setHex(0x1c123b);
+                    mesh.material.emissiveIntensity = 0.55;
+                } else {
+                    mesh.material.emissive.setHex(0x000000);
+                    mesh.material.emissiveIntensity = 0.0;
+                }
+                mesh.material.needsUpdate = true;
+            }
+
+            // Populate clinical dashboard card
+            document.getElementById('card-system').textContent = db.system;
+            document.getElementById('card-title').innerHTML = `
+                <span class="structure-dot" style="color: ${db.color}; background: ${db.color}"></span>
+                ${db.name}
+            `;
+            document.getElementById('card-func').innerHTML = db.func;
+            document.getElementById('card-clinical').innerHTML = db.clinical;
+            document.getElementById('clinical-details-card').classList.remove('collapsed');
+
+            // Set up camera target focus smoothly
+            const center = getMeshCenter(id);
+            if (center) {
+                // Animate controls target target
+                controls.target.copy(center);
+            }
+
+            updateStructureOpacities();
+        }
+
+        function highlightStructureOnHover(id) {
+            if (id === selectedStructureId) return;
+            const mesh = structures[id];
+            if (mesh) {
+                mesh.material.emissive.setHex(0x120a2e);
+                mesh.material.emissiveIntensity = 0.35;
+                mesh.material.needsUpdate = true;
+            }
+        }
+
+        function resetHoverHighlight() {
+            for (const [id, mesh] of Object.entries(structures)) {
+                if (id !== selectedStructureId) {
+                    mesh.material.emissive.setHex(0x000000);
+                    mesh.material.emissiveIntensity = 0.0;
+                    mesh.material.needsUpdate = true;
+                }
+            }
+        }
+
+        window.selectPathway = function(pathwayId) {
+            const btns = ['meso', 'motor', 'limbic'];
+            const pathwaysMap = { 'mesolimbic': 'meso', 'nigrostriatal': 'motor', 'limbic': 'limbic' };
+            const activeSuffix = pathwaysMap[pathwayId];
+            
+            const btn = document.getElementById(`pathway-btn-${activeSuffix}`);
+            const isAlreadyActive = btn.classList.contains('active');
+            
+            // Clear selections
+            btns.forEach(b => document.getElementById(`pathway-btn-${b}`).classList.remove('active'));
+            document.getElementById('pathway-active-badge').style.display = 'none';
+            document.getElementById('card-pathway-text').style.display = 'none';
+            clearPathwayCurves();
+            
+            if (isAlreadyActive) return; // Toggle OFF
+
+            // Set active
+            btn.classList.add('active');
+            document.getElementById('pathway-active-badge').style.display = 'inline-flex';
+            document.getElementById('pathway-active-badge').style.background = pathwaysDb[pathwayId].color + '22';
+            document.getElementById('pathway-active-badge').style.borderColor = pathwaysDb[pathwayId].color + '44';
+            document.getElementById('pathway-active-badge').style.color = pathwaysDb[pathwayId].color;
+            
+            const ptext = document.getElementById('card-pathway-text');
+            ptext.style.display = 'block';
+            ptext.innerHTML = `<strong>${pathwaysDb[pathwayId].name}</strong>: ${pathwaysDb[pathwayId].description}`;
+            
+            renderPathwayCurves(pathwayId);
+        };
+
+        window.applyPreset = function(type) {
+            // De-activate all clinical preset button highlights
+            const presets = ['limbic', 'dopamine', 'xray'];
+            presets.forEach(p => {
+                const el = document.getElementById(`preset-btn-${p}`);
+                if (el) {
+                    el.style.background = 'rgba(255,255,255,0.03)';
+                    el.style.borderColor = 'rgba(255,255,255,0.05)';
+                    el.style.boxShadow = 'none';
+                }
+            });
+            
+            const btn = document.getElementById(`preset-btn-${type}`);
+            if (btn) {
+                let glowColor = 'rgba(56, 189, 248, 0.4)';
+                if (type === 'limbic') glowColor = 'rgba(16, 185, 129, 0.4)';
+                if (type === 'dopamine') glowColor = 'rgba(245, 158, 11, 0.4)';
+                
+                btn.style.background = glowColor.replace('0.4', '0.15');
+                btn.style.borderColor = glowColor;
+                btn.style.boxShadow = `0 0 10px ${glowColor.replace('0.4', '0.1')}`;
+            }
+
+            // Reset current selection
+            selectStructure(null);
+
+            if (type === 'limbic') {
+                // Focus on limbic system: set transparency of hemispheres to 85%
+                adjustHemisphereTransparency(85);
+                document.getElementById('transparency-slider').value = 85;
+                
+                // Show limbic category
+                filterCategory('limbic');
+                
+                // Track limbic Papez pathway
+                selectPathway('limbic');
+                
+                // Set isolation to 25% to dim non-limbic nodes
+                adjustIsolation(25);
+                document.getElementById('isolation-slider').value = 25;
+                
+                // Make sure sagittal cut and explode views are off
+                if (sagittalCutMode) toggleSagittalSlice();
+                if (explodeMode) toggleExplode();
+            } else if (type === 'dopamine') {
+                // Dopamine: set transparency of hemispheres to 95%
+                adjustHemisphereTransparency(95);
+                document.getElementById('transparency-slider').value = 95;
+                
+                // Show stem / diencephalon category
+                filterCategory('diencephalon');
+                
+                // Track mesolimbic dopamine pathway
+                selectPathway('mesolimbic');
+                
+                // Highlight Ventral Tegmental Area (VTA)
+                selectStructure('VTA');
+                
+                // Set isolation to 15%
+                adjustIsolation(15);
+                document.getElementById('isolation-slider').value = 15;
+                
+                if (sagittalCutMode) toggleSagittalSlice();
+                if (explodeMode) toggleExplode();
+            } else if (type === 'xray') {
+                // X-Ray Cut: Opaque Hemispheres but activate Sagittal Cut + Explode View
+                adjustHemisphereTransparency(15);
+                document.getElementById('transparency-slider').value = 15;
+                
+                // Show all categories
+                filterCategory('all');
+                
+                // De-activate current pathway
+                const activeBtn = document.querySelector('.pathway-btn.active');
+                if (activeBtn) {
+                    const id = activeBtn.id.includes('meso') ? 'mesolimbic' : (activeBtn.id.includes('motor') ? 'nigrostriatal' : 'limbic');
+                    selectPathway(id); // Toggle off
+                }
+                
+                // Activate both exploded view and sagittal cut for full internal cross-section exploration
+                if (!sagittalCutMode) toggleSagittalSlice();
+                if (!explodeMode) toggleExplode();
+                
+                adjustIsolation(100);
+                document.getElementById('isolation-slider').value = 100;
+            }
+        };
+
+        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
+        const tooltip = document.getElementById('tooltip');
+
+        function onPointerMove(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const meshes = Object.values(structures).filter(m => m.visible);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                if (hoveredObject !== hit) {
+                    if (hoveredObject && hoveredObject.name !== selectedStructureId) {
+                        hoveredObject.material.emissive.setHex(0x000000);
+                    }
+                    hoveredObject = hit;
+                    if (hit.name !== selectedStructureId) {
+                        hit.material.emissive.setHex(0x100824);
+                        hit.material.emissiveIntensity = 0.35;
+                    }
+                    document.body.style.cursor = 'pointer';
+                }
+                
+                tooltip.textContent = neuroDb[hit.name].name;
+                tooltip.style.left = (event.clientX + 16) + 'px';
+                tooltip.style.top = (event.clientY - 12) + 'px';
+                tooltip.classList.add('visible');
+            } else {
+                if (hoveredObject) {
+                    if (hoveredObject.name !== selectedStructureId) {
+                        hoveredObject.material.emissive.setHex(0x000000);
+                    }
+                    hoveredObject = null;
+                    document.body.style.cursor = 'default';
+                }
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        function onPointerDown(event) {
+            if (event.clientX < 400 && event.clientY > window.innerHeight - 350) return;
+            if (event.clientY < 90) return;
+            if (event.clientX > window.innerWidth - 410 && event.clientY > window.innerHeight - 350) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const meshes = Object.values(structures).filter(m => m.visible);
+            const intersects = raycaster.intersectObjects(meshes);
+
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                selectStructure(hit.name);
+            }
+        }
+
+        window.addEventListener('mousemove', onPointerMove, false);
+        window.addEventListener('click', onPointerDown, false);
+
+        // ─── Header Controls Functions ────────────────────────────────
+        window.toggleAutoRotate = function() {
+            autoRotate = !autoRotate;
+            controls.autoRotate = autoRotate;
+            document.getElementById('btn-rotate').classList.toggle('active', autoRotate);
+        };
+
+        window.toggleWireframe = function() {
+            wireframeMode = !wireframeMode;
+            for (const mesh of Object.values(structures)) {
+                mesh.material.wireframe = wireframeMode;
+            }
+            document.getElementById('btn-wireframe').classList.toggle('active', wireframeMode);
+        };
+
+        window.toggleExplode = function() {
+            explodeMode = !explodeMode;
+            targetExplode = explodeMode ? 1.0 : 0.0;
+            document.getElementById('btn-explode').classList.toggle('active', explodeMode);
+        };
+
+        window.toggleSagittalSlice = function() {
+            sagittalCutMode = !sagittalCutMode;
+            document.getElementById('btn-slice').classList.toggle('active', sagittalCutMode);
+
+            if (sagittalCutMode) {
+                if (hemisphereTransparency === 0) {
+                    adjustHemisphereTransparency(15);
+                    document.getElementById('transparency-slider').value = 15;
+                }
+            } else {
+                adjustHemisphereTransparency(0);
+                document.getElementById('transparency-slider').value = 0;
+            }
+        };
+
+        // ─── Explode Directions Setup ─────────────────────────────────
+        const explodeDirections = {
+            'Cerebrum_Left': new THREE.Vector3(-0.7, 0.25, 0),
+            'Cerebrum_Right': new THREE.Vector3(0.7, 0.25, 0),
+            'Cerebellum': new THREE.Vector3(0, -0.3, -0.7),
+            'Corpus_Callosum': new THREE.Vector3(0, 0.45, 0),
+            
+            'Thalamus_Left': new THREE.Vector3(-0.25, 0.2, 0.1),
+            'Thalamus_Right': new THREE.Vector3(0.25, 0.2, 0.1),
+            
+            'Caudate_Left': new THREE.Vector3(-0.35, 0.3, 0.05),
+            'Caudate_Right': new THREE.Vector3(0.35, 0.3, 0.05),
+            'Putamen_Left': new THREE.Vector3(-0.45, 0.15, -0.05),
+            'Putamen_Right': new THREE.Vector3(0.45, 0.15, -0.05),
+            'Globus_Pallidus_Left': new THREE.Vector3(-0.3, 0.1, -0.05),
+            'Globus_Pallidus_Right': new THREE.Vector3(0.3, 0.1, -0.05),
+            
+            'Hypothalamus': new THREE.Vector3(0, 0.1, 0.2),
+            'Pituitary_Gland': new THREE.Vector3(0, -0.15, 0.35),
+            'Pineal_Gland': new THREE.Vector3(0, 0.1, -0.35),
+            
+            'Hippocampus_Left': new THREE.Vector3(-0.35, -0.1, 0.15),
+            'Hippocampus_Right': new THREE.Vector3(0.35, -0.1, 0.15),
+            'Amygdala_Left': new THREE.Vector3(-0.4, -0.15, 0.25),
+            'Amygdala_Right': new THREE.Vector3(0.4, -0.15, 0.25),
+            
+            'Nucleus_Accumbens_Left': new THREE.Vector3(-0.35, -0.05, 0.2),
+            'Nucleus_Accumbens_Right': new THREE.Vector3(0.35, -0.05, 0.2),
+            
+            'Pons': new THREE.Vector3(0, -0.2, 0.25),
+            'VTA': new THREE.Vector3(0, -0.1, 0.1),
+            'Substantia_Nigra_Left': new THREE.Vector3(-0.15, -0.15, 0.05),
+            'Substantia_Nigra_Right': new THREE.Vector3(0.15, -0.15, 0.05),
+            
+            'Medulla_Oblongata': new THREE.Vector3(0, -0.4, 0.15),
+            'Spinal_Cord': new THREE.Vector3(0, -0.7, -0.1),
+            
+            // New Accessory & Midline Structures
+            'Midbrain': new THREE.Vector3(0, -0.1, 0.15),
+            'Interthalamic_Adhesion': new THREE.Vector3(0, 0.25, 0.05),
+            'Infundibulum_Stalk': new THREE.Vector3(0, -0.05, 0.25),
+            'Pineal_Stalks': new THREE.Vector3(0, 0.08, -0.3),
+            'Fornix': new THREE.Vector3(0, 0.35, -0.05),
+            'Spinal_Nerve_Rootlets': new THREE.Vector3(0, -0.85, -0.2)
+        };
+
+        // ─── Animation Loop ───────────────────────────────────────────
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            if (sagittalCutMode) {
+                sagittalClipLeft.constant = THREE.MathUtils.lerp(sagittalClipLeft.constant, 0.0, 0.08);
+            } else {
+                sagittalClipLeft.constant = THREE.MathUtils.lerp(sagittalClipLeft.constant, 5.0, 0.08);
+            }
+
+            explodeAmount += (targetExplode - explodeAmount) * 0.08;
+            for (const [key, mesh] of Object.entries(structures)) {
+                const orig = originalPositions[key];
+                const dir = explodeDirections[key];
+                if (orig && dir) {
+                    mesh.position.lerpVectors(
+                        orig,
+                        orig.clone().add(dir),
+                        explodeAmount
+                    );
+                }
+            }
+
+            if (structures['Pituitary_Gland']) {
+                const t = performance.now() * 0.002;
+                structures['Pituitary_Gland'].scale.setScalar(1.0 + 0.04 * Math.sin(t));
+                structures['Pineal_Gland'].scale.setScalar(1.0 + 0.03 * Math.cos(t));
+                
+                if (selectedStructureId === 'VTA' && structures['VTA']) {
+                    structures['VTA'].scale.setScalar(1.0 + 0.06 * Math.sin(t * 1.5));
+                }
+            }
+
+            pathwayPulses.forEach(p => {
+                p.progress += p.speed;
+                if (p.progress > 1.0) p.progress = 0.0;
+                
+                const pt = p.curve.getPointAt(p.progress);
+                if (pt) p.mesh.position.copy(pt);
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        assembleBrainModel().then(() => {
+            animate();
+        });
+    </script>
+</body>
+</html>

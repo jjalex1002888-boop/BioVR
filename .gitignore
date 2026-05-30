@@ -63,3 +63,21 @@ CrashReport*/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Python virtual environments & caching
+.venv/
+__pycache__/
+*.pyc
+
+# Blender backup files
+*.blend[1-9]
+*.blend1
+*.blend2
+*.blend3
+*.blend4
+*.blend5
+*.blend6
+*.blend7
+*.blend8
+*.blend9
+

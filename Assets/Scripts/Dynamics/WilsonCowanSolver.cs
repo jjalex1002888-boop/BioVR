@@ -45,9 +45,24 @@ namespace BioVR.Dynamics
             // Modulate coupling constants and thresholds using current hormone levels
             ModulateParameters();
 
-            // Perform numerical ODE integration using Euler step (linked to Unity dt)
+            // Perform numerical ODE integration using Euler step (linked to Unity dt and TimeWarp scaling)
             float dt = Time.deltaTime;
-            Integrate(dt);
+            if (TimeWarpManager.Instance != null)
+            {
+                if (TimeWarpManager.Instance.isPaused)
+                {
+                    dt = 0f;
+                }
+                else
+                {
+                    dt *= TimeWarpManager.Instance.timeScaleFactor;
+                }
+            }
+
+            if (dt > 0f)
+            {
+                Integrate(dt);
+            }
 
             // Sync state back to membrane potential readout
             // Normal resting potential is -70mV, peak spike activation at +40mV

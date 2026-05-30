@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dart Monkey Playground | Bloons TD 6 Edition</title>
+    <!-- Google Fonts: Luckiest Guy for titles, Outfit for premium modern UI -->
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Full-screen Canvas for WebGL -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Grid -->
+    <div id="ui-overlay">
+        <!-- Top Title Bar -->
+        <header class="app-header">
+            <h1 class="glow-text">DART MONKEY 3D</h1>
+            <div class="subtitle">Procedural Interactive Playground</div>
+        </header>
+
+        <!-- Left Upgrade Panel -->
+        <aside class="side-panel left-panel glass-card">
+            <h2 class="panel-title"><span class="icon">🐒</span> Monkey Upgrades</h2>
+            <div class="upgrade-path">
+                <div class="path-title">Path 1: Senses</div>
+                
+                <button class="upgrade-btn" id="upgrade-long-range" data-tier="1">
+                    <div class="btn-content">
+                        <span class="upgrade-icon">🟢</span>
+                        <div class="btn-text">
+                            <span class="btn-name">Long Range Darts</span>
+                            <span class="btn-desc">Equips the iconic Green Headband</span>
+                        </div>
+                    </div>
+                </button>
+
+                <button class="upgrade-btn" id="upgrade-eyesight" data-tier="2" disabled>
+                    <div class="btn-content">
+                        <span class="upgrade-icon">🕶️</span>
+                        <div class="btn-text">
+                            <span class="btn-name">Enhanced Eyesight</span>
+                            <span class="btn-desc">Equips Red Goggles + Auto-aims nearest Bloon</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="upgrade-path">
+                <div class="path-title">Path 2: Catapult</div>
+                
+                <button class="upgrade-btn" id="upgrade-spike" data-tier="3">
+                    <div class="btn-content">
+                        <span class="upgrade-icon">🏐</span>
+                        <div class="btn-text">
+                            <span class="btn-name">Spike-o-pult</span>
+                            <span class="btn-desc">Launches giant spiked balls instead of darts</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
+            
+            <button class="reset-btn" id="reset-upgrades">Reset Upgrades</button>
+        </aside>
+
+        <!-- Right Stats Panel -->
+        <aside class="side-panel right-panel glass-card">
+            <h2 class="panel-title"><span class="icon">🎈</span> Playground Stats</h2>
+            
+            <div class="stat-row">
+                <span class="stat-label">Bloons Popped:</span>
+                <span class="stat-value highlight-text" id="pop-counter">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Active Darts:</span>
+                <span class="stat-value" id="active-darts-counter">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Active Bloons:</span>
+                <span class="stat-value" id="bloon-counter">0</span>
+            </div>
+
+            <hr class="divider">
+
+            <h3 class="subpanel-title">Lighting Setup</h3>
+            <div class="lighting-controls">
+                <button class="light-btn active" data-light="sunny">☀️ Sunny</button>
+                <button class="light-btn" data-light="sunset">🌅 Sunset</button>
+                <button class="light-btn" data-light="neon">🌌 Neon</button>
+            </div>
+
+            <hr class="divider">
+
+            <h3 class="subpanel-title">Audio Settings</h3>
+            <div class="audio-controls">
+                <button class="audio-btn active" id="btn-sound-fx">🔊 Sound FX</button>
+                <button class="audio-btn" id="btn-sound-bgm">🎵 Ambient Loop</button>
+            </div>
+        </aside>
+
+        <!-- Bottom Controls Guide -->
+        <footer class="app-footer glass-card">
+            <div class="guide-item"><span class="key">L-Click</span> Throw Dart / Pop Bloon</div>
+            <div class="guide-item"><span class="key">Drag Mouse</span> Rotate Camera</div>
+            <div class="guide-item"><span class="key">Scroll</span> Zoom In/Out</div>
+            <div class="guide-item"><span class="key">R-Click Drag</span> Pan View</div>
+        </footer>
+    </div>
+
+    <!-- Notification overlay -->
+    <div id="announcement" class="hidden">UPGRADE UNLOCKED!</div>
+
+    <!-- Load Three.js and OrbitControls via robust CDNs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Custom application scripts -->
+    <script src="js/sound.js"></script>
+    <script src="js/monkey.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
